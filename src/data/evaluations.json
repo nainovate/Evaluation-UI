@@ -1,0 +1,51 @@
+{
+  "evaluations": [
+    {
+      "id": "eval-1",
+      "name": "Customer Support Bot Evaluation",
+      "deployment": "GPT-4 Customer Support",
+      "organization": "Acme Corporation",
+      "status": "completed",
+      "createdAt": "2024-01-15T08:00:00Z",
+      "completedAt": "2024-01-15T08:45:00Z",
+      "totalTasks": 50,
+      "completedTasks": 48,
+      "failedTasks": 2,
+      "progress": 100,
+      "description": "Comprehensive evaluation of customer support responses"
+    },
+    {
+      "id": "eval-2",
+      "name": "Content Quality Assessment",
+      "deployment": "Claude Content Generator",
+      "organization": "TechFlow Inc",
+      "status": "in-progress",
+      "createdAt": "2024-01-15T10:15:00Z",
+      "totalTasks": 75,
+      "completedTasks": 32,
+      "failedTasks": 1,
+      "progress": 44,
+      "description": "Evaluating marketing content generation quality"
+    },
+    {
+      "id": "eval-3",
+      "name": "Code Review Assistant Test",
+      "deployment": "Llama Code Assistant",
+      "organization": "DataSync Labs",
+      "status": "failed",
+      "createdAt": "2024-01-15T07:30:00Z",
+      "totalTasks": 25,
+      "completedTasks": 8,
+      "failedTasks": 17,
+      "progress": 32,
+      "description": "Testing code review and completion capabilities"
+    }
+  ],
+  "stats": {
+    "totalEvaluations": 156,
+    "activeEvaluations": 3,
+    "completedEvaluations": 128,
+    "failedEvaluations": 25,
+    "averageSuccessRate": 87.2
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "evaluationSession": {
+    "id": "eval_1752658961978_9v46ah7so",
+    "createdAt": "2025-07-16T09:42:41.978Z",
+    "lastModified": "2025-07-17T06:46:31.682Z",
+    "status": "dataset_selected"
+  },
+  "dataset": {
+    "uid": "eval_dataset_001",
+    "id": "eval_dataset_001",
+    "name": "Customer Support QA Evaluation",
+    "selectedAt": "2025-07-17T06:46:21.626Z",
+    "taskType": "Question Answering",
+    "rows": 500,
+    "columns": [
+      "question",
+      "expected_answer",
+      "context",
+      "category"
+    ]
+  },
+  "deployment": {
+    "id": "3",
+    "name": "gpt-4-turbo",
+    "model": "gpt-4-turbo-2024-04-09",
+    "provider": "OpenAI",
+    "selectedAt": "2025-07-17T06:46:25.360Z"
+  },
+  "metrics": {
+    "categories": [
+      {
+        "id": "answer-quality",
+        "name": "Answer Quality",
+        "description": "Evaluate how well responses answer questions and stay grounded in context",
+        "icon": "🎯",
+        "color": "indigo",
+        "selected": false,
+        "subMetrics": [
+          {
+            "id": "answer-relevancy",
+            "name": "Answer Relevancy",
+            "description": "Measures how relevant the answer is to the given question",
+            "enabled": false
+          },
+          {
+            "id": "faithfulness",
+            "name": "Faithfulness",
+            "description": "Evaluates if the answer is grounded in the provided context",
+            "enabled": false
+          },
+          {
+            "id": "hallucination-detection",
+            "name": "Hallucination Detection",
+            "description": "Identifies when the model generates false or unsupported information",
+            "enabled": false
+          }
+        ]
+      },
+      {
+        "id": "context-understanding",
+        "name": "Context Understanding",
+        "description": "Measure how well models comprehend and utilize provided context",
+        "icon": "📊",
+        "color": "green",
+        "selected": true,
+        "subMetrics": [
+          {
+            "id": "context-recall",
+            "name": "Context Recall",
+            "description": "Measures how well the model recalls information from the context",
+            "enabled": true
+          },
+          {
+            "id": "factual-consistency",
+            "name": "Factual Consistency",
+            "description": "Evaluates consistency of facts between context and answer",
+            "enabled": false
+          }
+        ]
+      },
+      {
+        "id": "similarity-accuracy",
+        "name": "Similarity & Accuracy",
+        "description": "Compare outputs against expected responses using similarity measures",
+        "icon": "⚖️",
+        "color": "yellow",
+        "selected": false,
+        "subMetrics": [
+          {
+            "id": "exact-match",
+            "name": "Exact Match",
+            "description": "Checks if the answer exactly matches the expected response",
+            "enabled": false
+          },
+          {
+            "id": "bert-score",
+            "name": "BERTScore",
+            "description": "Semantic similarity using BERT embeddings",
+            "enabled": false
+          },
+          {
+            "id": "embedding-distance",
+            "name": "Embedding Distance",
+            "description": "Cosine similarity between answer and reference embeddings",
+            "enabled": false
+          }
+        ]
+      },
+      {
+        "id": "language-quality",
+        "name": "Language Quality",
+        "description": "Assess linguistic quality, fluency, and coherence of generated text",
+        "icon": "📝",
+        "color": "purple",
+        "selected": false,
+        "subMetrics": [
+          {
+            "id": "fluency",
+            "name": "Fluency",
+            "description": "Evaluates the natural flow and readability of the text",
+            "enabled": false
+          },
+          {
+            "id": "coherence",
+            "name": "Coherence",
+            "description": "Measures logical consistency and clarity of the response",
+            "enabled": false
+          },
+          {
+            "id": "conciseness",
+            "name": "Conciseness",
+            "description": "Assesses if the answer is appropriately brief and to the point",
+            "enabled": false
+          }
+        ]
+      }
+    ],
+    "selectedCategory": "context-understanding",
+    "totalSelected": 1,
+    "configuration": {
+      "evaluationModel": "gpt-4",
+      "batchSize": 50,
+      "timeout": 30
+    },
+    "configuredAt": "2025-07-17T06:46:31.648Z"
+  },
+  "execution": {
+    "startedAt": null,
+    "completedAt": null,
+    "status": null,
+    "results": null
+  }
+}
