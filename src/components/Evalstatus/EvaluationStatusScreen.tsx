@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../ThemeToggle';
-import { EvaluationSidebar } from './EvaluationSidebar';
+import { EvaluationSidebar } from '../EvaluationSidebar';
 import { EvaluationContent } from './EvaluationContent';
 import { useEvaluationData } from '../../hooks/useEvaluationData';
 import { EvaluationData } from '../../types/evaluation';
