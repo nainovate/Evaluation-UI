@@ -17,9 +17,6 @@ export default function NainovateDashboard() {
     router.push(`/evaluation/status?name=${encodeURIComponent(evaluationName)}`)
   }
 
-  const handleViewAllEvaluations = () => {
-    console.log('View all evaluations')
-  }
 
   const scrollJobs = (direction: 'left' | 'right') => {
     const maxIndex = 2

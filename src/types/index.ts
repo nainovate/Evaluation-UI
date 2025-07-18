@@ -188,6 +188,37 @@ export interface Deployment {
   description?: string;
   version?: string;
 }
+// Add to existing types
+export interface EvaluationStatusData {
+  id: string;
+  name: string;
+  description: string;
+  status: 'running' | 'completed' | 'failed' | 'pending';
+  model: string;
+  modelVersion: string;
+  dataset: string;
+  datasetSize: string;
+  owner: string;
+  created: string;
+  progress: number;
+  metrics: {
+    answerRelevance: number;
+    coherence: number;
+    helpfulness: number;
+    accuracy: number;
+    currentTask: number;
+    totalTasks: number;
+  };
+  systemStatus: {
+    cpuUsage: number;
+    gpuUsage: number;
+    ramUsage: string;
+    vramUsage: string;
+    temperature: string;
+    diskUsage: string;
+  };
+  tags: string[];
+}
 
 export interface EvaluationMetadata {
   evaluationSession: {
@@ -220,4 +251,5 @@ export interface EvaluationMetadata {
     status: string | null;
     results: any | null;
   };
+  
 }
