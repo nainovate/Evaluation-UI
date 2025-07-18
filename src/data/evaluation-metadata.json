@@ -2,14 +2,14 @@
   "evaluationSession": {
     "id": "eval_1752658961978_9v46ah7so",
     "createdAt": "2025-07-16T09:42:41.978Z",
-    "lastModified": "2025-07-17T06:46:31.682Z",
+    "lastModified": "2025-07-18T06:15:28.031Z",
     "status": "dataset_selected"
   },
   "dataset": {
     "uid": "eval_dataset_001",
     "id": "eval_dataset_001",
     "name": "Customer Support QA Evaluation",
-    "selectedAt": "2025-07-17T06:46:21.626Z",
+    "selectedAt": "2025-07-18T05:58:27.543Z",
     "taskType": "Question Answering",
     "rows": 500,
     "columns": [
@@ -20,11 +20,11 @@
     ]
   },
   "deployment": {
-    "id": "3",
-    "name": "gpt-4-turbo",
-    "model": "gpt-4-turbo-2024-04-09",
-    "provider": "OpenAI",
-    "selectedAt": "2025-07-17T06:46:25.360Z"
+    "id": "2",
+    "name": "staging-v2",
+    "model": "claude-3-haiku-20240307",
+    "provider": "Anthropic",
+    "selectedAt": "2025-07-18T06:04:59.281Z"
   },
   "metrics": {
     "categories": [
@@ -68,13 +68,13 @@
             "id": "context-recall",
             "name": "Context Recall",
             "description": "Measures how well the model recalls information from the context",
-            "enabled": true
+            "enabled": false
           },
           {
             "id": "factual-consistency",
             "name": "Factual Consistency",
             "description": "Evaluates consistency of facts between context and answer",
-            "enabled": false
+            "enabled": true
           }
         ]
       },
@@ -142,7 +142,7 @@
       "batchSize": 50,
       "timeout": 30
     },
-    "configuredAt": "2025-07-17T06:46:31.648Z"
+    "configuredAt": "2025-07-18T06:15:27.966Z"
   },
   "execution": {
     "startedAt": null,

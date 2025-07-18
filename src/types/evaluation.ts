@@ -178,3 +178,96 @@ export interface EvaluationTemplate {
   createdBy: string
   usageCount: number
 }
+// src/types/evaluation.ts
+
+export interface EvaluationMetrics {
+  answerRelevance: number;
+  coherence: number;
+  helpfulness: number;
+  accuracy: number;
+  currentTask: number;
+  totalTasks: number;
+}
+
+export interface SystemStatus {
+  cpuUsage: number;
+  gpuUsage: number;
+  ramUsage: string;
+  vramUsage: string;
+  temperature: string;
+  diskUsage: string;
+}
+
+export interface EvaluationStage {
+  name: string;
+  status: 'completed' | 'running' | 'pending' | 'failed';
+  description: string;
+  startTime?: string;
+  endTime?: string;
+  duration?: number;
+}
+
+export type EvaluationStatus = 'running' | 'completed' | 'failed' | 'pending' | 'cancelled';
+
+export interface EvaluationData {
+  id: string;
+  name: string;
+  description: string;
+  status: EvaluationStatus;
+  model: string;
+  modelVersion: string;
+  dataset: string;
+  datasetSize: string;
+  owner: string;
+  created: string;
+  completed?: string;
+  progress: number;
+  currentStage: string;
+  stages: EvaluationStage[];
+  metrics: EvaluationMetrics;
+  systemStatus: SystemStatus;
+  tags: string[];
+  configuration?: {
+    batchSize?: number;
+    timeout?: number;
+    retryAttempts?: number;
+  };
+  results?: {
+    overallScore?: number;
+    passedTests?: number;
+    failedTests?: number;
+    reportUrl?: string;
+  };
+}
+
+export interface EvaluationSummary {
+  id: string;
+  name: string;
+  status: EvaluationStatus;
+  progress: number;
+  created: string;
+  model: string;
+  dataset: string;
+}
+
+// API Response types
+export interface EvaluationListResponse {
+  evaluations: EvaluationSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface EvaluationResponse {
+  evaluation: EvaluationData;
+  success: boolean;
+  message?: string;
+}
+
+// Hook types
+export interface UseEvaluationOptions {
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+  onStatusChange?: (status: EvaluationStatus) => void;
+  onError?: (error: string) => void;
+}
