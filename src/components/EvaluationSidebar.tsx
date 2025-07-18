@@ -10,7 +10,7 @@ import {
   RefreshCw,
   ChevronDown
 } from 'lucide-react';
-import { EvaluationData } from '../../types/evaluation';
+import { EvaluationData } from '../types/evaluation';
 
 interface EvaluationSidebarProps {
   evaluation: EvaluationData;

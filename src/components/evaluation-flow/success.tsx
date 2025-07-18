@@ -348,7 +348,7 @@ export const Success: React.FC<SuccessProps> = ({
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 hover:scale-105 hover:shadow-lg group"
               >
                 <Eye className="w-5 h-5" />
-                View Progress & Details
+                View Progress
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               <button
@@ -539,24 +539,7 @@ export const Success: React.FC<SuccessProps> = ({
         </div>
 
         {/* ADD: Quick Actions Section */}
-        <div className="mt-8 text-center">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={() => router.push('/evaluation/start')}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
-            >
-              <PlayCircle className="w-4 h-4" />
-              Start Another Evaluation
-            </button>
-            <button
-              onClick={handleViewAllEvaluations}
-              className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
-            >
-              <BarChart3 className="w-4 h-4" />
-              View All Results
-            </button>
-          </div>
-        </div>
+        
       </div>
 
       {/* CSS Animations */}

@@ -22,14 +22,7 @@ import { MetricsConfigurationStep } from '../../../components/evaluation-flow/Me
 import { ReviewAndRunStep } from '../../../components/evaluation-flow/ReviewAndRunStep';
 import { Success } from '../../../components/evaluation-flow/success';
 
-// Define steps
-const STEPS = [
-  { id: 1, name: 'Select Dataset', key: 'dataset', icon: 'database' },
-  { id: 2, name: 'Choose Model', key: 'model', icon: 'cpu' },
-  { id: 3, name: 'Configure Metrics', key: 'metrics', icon: 'bar-chart' },
-  { id: 4, name: 'Review & Run', key: 'review', icon: 'play' },
-  { id: 5, name: 'Success', key: 'success', icon: <CheckCircle className="w-5 h-5" />, showIcon: true }
-];
+import { STEPS } from '../../../utils/config';
 
 export default function EvaluationFlow() {
   const router = useRouter();
