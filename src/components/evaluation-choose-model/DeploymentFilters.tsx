@@ -24,15 +24,25 @@ export default function DeploymentFilters({
 }: DeploymentFiltersProps) {
   const statusOptions = ['All Status', 'Active', 'Inactive', 'Error'];
 
+  // UPDATED: Disabled Add Deployment button handler
+  const handleAddDeployment = () => {
+    // TODO: Will be integrated with other page later
+    console.log('Add Deployment button clicked - functionality disabled for now');
+    // onAddDeployment(); // Commented out - will be enabled later
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           Available Model Deployments
         </h3>
+        {/* UPDATED: Disabled button but kept visible */}
         <button
-          onClick={onAddDeployment}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+          onClick={handleAddDeployment}
+          disabled={true} // CHANGED: Disabled for now
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gray-400 cursor-not-allowed opacity-50 transition-colors"
+          title="Add Deployment (Coming Soon)"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Deployment

@@ -205,9 +205,16 @@ export const ExistingDatasets: React.FC<ExistingDatasetsProps> = ({
                     <Trash2 className="h-4 w-4" />
                   </button>
                   
+                  {/* Updated status indicator section - Option 1 implementation */}
                   {dataset.status === 'invalid' && (
                     <span className="text-xs text-red-600 dark:text-red-400 font-medium">
                       Invalid
+                    </span>
+                  )}
+                  
+                  {dataset.status === 'valid' && (
+                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Valid
                     </span>
                   )}
                 </div>
@@ -217,4 +224,5 @@ export const ExistingDatasets: React.FC<ExistingDatasetsProps> = ({
         </div>
       )}
     </div>
-  )};
+  );
+};
