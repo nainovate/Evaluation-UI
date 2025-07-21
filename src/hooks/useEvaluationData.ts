@@ -1,8 +1,10 @@
-// src/hooks/useEvaluationData.ts
+
 'use client'
 
 import { useState, useEffect, useCallback } from 'react';
 import { EvaluationData } from '../types/evaluation';
+// 🔥 ADD THIS IMPORT
+import { getEvaluationStages } from '../utils/flowGenerator';
 
 interface UseEvaluationDataReturn {
   evaluation: EvaluationData | null;
@@ -23,6 +25,46 @@ export const useEvaluationData = (
   const [error, setError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(true);
 
+  // 🔥 ADD THESE HELPER FUNCTIONS
+  const generateStagesFromConfig = useCallback((currentStage: string = 'Evaluation'): Array<{name: string, status: string, description: string}> => {
+    const configStages = getEvaluationStages(); // Reads from config!
+    
+    return configStages.map((stageName, index) => ({
+      name: stageName,
+      status: getStageStatus(stageName, currentStage, index),
+      description: getStageDescription(stageName)
+    }));
+  }, []);
+
+  const getStageStatus = (stageName: string, currentStage: string, index: number): string => {
+    const configStages = getEvaluationStages();
+    const currentIndex = configStages.indexOf(currentStage);
+    const stageIndex = configStages.indexOf(stageName);
+
+    if (stageIndex < currentIndex) return 'completed';
+    if (stageIndex === currentIndex) return 'running';
+    return 'pending';
+  };
+
+  const getStageDescription = (stageName: string): string => {
+    const descriptions: Record<string, string> = {
+      'Dataset Loading': 'Loading and validating evaluation data',
+      'Model Setup': 'Initializing model and configuration',
+      'Evaluation': 'Running evaluation tasks and collecting metrics',
+      'Analysis': 'Analyzing results and generating reports',
+      
+      // Support for custom stage names
+      'Initializing': 'Setting up the evaluation environment',
+      'Processing': 'Processing evaluation data and running tests',
+      'Finalizing': 'Completing evaluation and preparing results',
+      'Preparing': 'Preparing models and configurations',
+      'Executing': 'Executing evaluation tasks',
+      'Completing': 'Finalizing results and analysis'
+    };
+    
+    return descriptions[stageName] || `${stageName} phase of the evaluation process`;
+  };
+
   // Mock data generator for demo purposes
   const generateMockEvaluation = useCallback((name: string): EvaluationData => {
     return {
@@ -38,12 +80,19 @@ export const useEvaluationData = (
       created: '6/30/2025',
       progress: Math.floor(Math.random() * 100),
       currentStage: 'Evaluation',
-      stages: [
-        { name: 'Dataset Loading', status: 'completed', description: 'Loading and validating evaluation data' },
-        { name: 'Model Setup', status: 'completed', description: 'Initializing model and configuration' },
-        { name: 'Evaluation', status: 'running', description: 'Running evaluation tasks and collecting metrics' },
-        { name: 'Analysis', status: 'pending', description: 'Analyzing results and generating reports' }
-      ],
+      
+      // 🔥 REPLACE THESE HARDCODED STAGES (lines 43-48):
+      // OLD (REMOVE):
+      // stages: [
+      //   { name: 'Dataset Loading', status: 'completed', description: 'Loading and validating evaluation data' },
+      //   { name: 'Model Setup', status: 'completed', description: 'Initializing model and configuration' },
+      //   { name: 'Evaluation', status: 'running', description: 'Running evaluation tasks and collecting metrics' },
+      //   { name: 'Analysis', status: 'pending', description: 'Analyzing results and generating reports' }
+      // ],
+      
+      // NEW (USE CONFIG):
+      stages: generateStagesFromConfig('Evaluation'), // 🔥 NOW READS FROM CONFIG!
+      
       metrics: {
         answerRelevance: 0.924,
         coherence: 0.887,
@@ -62,8 +111,10 @@ export const useEvaluationData = (
       },
       tags: ['customer-service', 'quality-assessment', 'production']
     };
-  }, []);
+  }, [generateStagesFromConfig]); // 🔥 ADD DEPENDENCY
 
+  // Rest of your code remains the same...
+  
   // Fetch evaluation data
   const fetchEvaluationData = useCallback(async () => {
     try {
