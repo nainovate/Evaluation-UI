@@ -2,14 +2,14 @@
   "evaluationSession": {
     "id": "eval_1752658961978_9v46ah7so",
     "createdAt": "2025-07-16T09:42:41.978Z",
-    "lastModified": "2025-07-18T10:43:35.625Z",
+    "lastModified": "2025-07-21T04:10:53.391Z",
     "status": "dataset_selected"
   },
   "dataset": {
     "uid": "eval_dataset_001",
     "id": "eval_dataset_001",
     "name": "Customer Support QA Evaluation",
-    "selectedAt": "2025-07-18T10:43:21.267Z",
+    "selectedAt": "2025-07-21T04:10:40.521Z",
     "taskType": "Question Answering",
     "rows": 500,
     "columns": [
@@ -24,7 +24,7 @@
     "name": "gpt-4-turbo",
     "model": "gpt-4-turbo-2024-04-09",
     "provider": "OpenAI",
-    "selectedAt": "2025-07-18T10:43:24.937Z"
+    "selectedAt": "2025-07-21T04:10:45.937Z"
   },
   "metrics": {
     "categories": [
@@ -142,7 +142,7 @@
       "batchSize": 50,
       "timeout": 30
     },
-    "configuredAt": "2025-07-18T10:43:35.607Z"
+    "configuredAt": "2025-07-21T04:10:53.371Z"
   },
   "execution": {
     "startedAt": null,
