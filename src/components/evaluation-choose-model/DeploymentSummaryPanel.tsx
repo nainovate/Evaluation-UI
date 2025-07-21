@@ -1,22 +1,22 @@
 import React from 'react';
-import { Server, Activity, Clock, Globe, AlertCircle } from 'lucide-react';
+import { Server, CheckCircle, Activity, Clock, Globe } from 'lucide-react';
 import type { Deployment } from '../../types';
 
 interface DeploymentSummaryPanelProps {
-  selectedDeployment: Deployment | null;
+  selectedDeployments: Deployment[]; // CHANGED: Multiple deployments
 }
 
-export default function DeploymentSummaryPanel({ selectedDeployment }: DeploymentSummaryPanelProps) {
-  if (!selectedDeployment) {
+export default function DeploymentSummaryPanel({ selectedDeployments }: DeploymentSummaryPanelProps) {
+  if (selectedDeployments.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="text-center">
-          <Server className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <div className="text-center py-8">
+          <Server className="h-8 w-8 text-gray-400 mx-auto mb-2" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No Deployment Selected
+            No Models Selected
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Choose a deployment to see detailed information and performance metrics.
+            Select one or more model deployments to see their details here.
           </p>
         </div>
       </div>
@@ -25,166 +25,94 @@ export default function DeploymentSummaryPanel({ selectedDeployment }: Deploymen
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'text-green-600 dark:text-green-400';
-      case 'inactive':
-        return 'text-yellow-600 dark:text-yellow-400';
-      case 'error':
-        return 'text-red-600 dark:text-red-400';
-      default:
-        return 'text-gray-600 dark:text-gray-400';
-    }
-  };
-
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex items-center space-x-2 mb-6">
+        <CheckCircle className="h-5 w-5 text-green-500" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Selected Deployment
+          Selected Models ({selectedDeployments.length})
         </h3>
       </div>
 
-      <div className="p-6 space-y-6">
-        {/* Basic Info */}
-        <div>
-          <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-            {selectedDeployment.name}
-          </h4>
-          <span className={`text-sm font-medium capitalize ${getStatusColor(selectedDeployment.status)}`}>
-            {selectedDeployment.status}
-          </span>
-        </div>
-
-        {/* Description */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-            Description
-          </h4>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {selectedDeployment.description}
-          </p>
-        </div>
-
-        {/* Model Details */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Model Information
-          </h4>
-          <div className="space-y-3">
-            <div className="flex justify-between items-start">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Model</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white text-right max-w-[180px] break-words">
-                {selectedDeployment.model}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Provider</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {selectedDeployment.provider}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Version</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {selectedDeployment.version || 'N/A'}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Region</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {selectedDeployment.region}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Performance Metrics */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Performance Metrics
-          </h4>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">Response Time</span>
+      <div className="space-y-6">
+        {selectedDeployments.map((deployment, index) => (
+          <div 
+            key={deployment.id}
+            className={`${index !== selectedDeployments.length - 1 ? 'border-b border-gray-200 dark:border-gray-600 pb-6' : ''}`}
+          >
+            {/* Deployment Header */}
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                  {deployment.name}
+                </h4>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    deployment.status === 'active'
+                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                      : deployment.status === 'inactive'
+                      ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+                      : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+                  }`}>
+                    {deployment.status.toUpperCase()}
+                  </span>
+                </div>
               </div>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {selectedDeployment.responseTime}ms
-              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Activity className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">Uptime</span>
+
+            {/* Model Details */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-start">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Model</span>
+                <span className="text-xs font-medium text-gray-900 dark:text-white text-right max-w-[120px] break-words">
+                  {deployment.model}
+                </span>
               </div>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
-                {selectedDeployment.uptime}%
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Globe className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500 dark:text-gray-400">Last Updated</span>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Provider</span>
+                <span className="text-xs font-medium text-gray-900 dark:text-white">
+                  {deployment.provider}
+                </span>
               </div>
-              <span className="text-sm font-medium text-gray-900 dark:text-white text-right">
-                {formatDate(selectedDeployment.lastUpdated)}
-              </span>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Region</span>
+                <span className="text-xs font-medium text-gray-900 dark:text-white">
+                  {deployment.region}
+                </span>
+              </div>
+            </div>
+
+            {/* Performance Metrics */}
+            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-1 text-gray-500 dark:text-gray-400">
+                    <Clock className="w-3 h-3" />
+                    <span>{deployment.responseTime}ms</span>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-1 text-gray-500 dark:text-gray-400">
+                    <Activity className="w-3 h-3" />
+                    <span>{deployment.uptime}%</span>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-1 text-gray-500 dark:text-gray-400">
+                    <Globe className="w-3 h-3" />
+                    <span>{formatDate(deployment.lastUpdated)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Endpoint */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-            Endpoint
-          </h4>
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-            <code className="text-xs text-gray-800 dark:text-gray-200 break-all">
-              {selectedDeployment.endpoint}
-            </code>
-          </div>
-        </div>
-
-        {/* Status Warnings */}
-        {selectedDeployment.status === 'inactive' && (
-          <div className="flex items-start space-x-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Deployment Inactive
-              </p>
-              <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                This deployment is currently inactive but can still be used for evaluation.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {selectedDeployment.status === 'error' && (
-          <div className="flex items-start space-x-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                Connection Issues
-              </p>
-              <p className="text-sm text-red-700 dark:text-red-300">
-                This deployment is experiencing connection issues and cannot be selected.
-              </p>
-            </div>
-          </div>
-        )}
+        ))}
       </div>
     </div>
   );

@@ -24,29 +24,38 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('All Providers');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
-  const [showAddModal, setShowAddModal] = useState(false);
+  // REMOVED: const [showAddModal, setShowAddModal] = useState(false);
 
   const {
     deployments,
     providers,
-    selectedDeployment,
+    selectedDeployments,
     loading,
     error,
     handleDeploymentSelect,
+    handleDeploymentDeselect,
     getFilteredDeployments,
   } = useEvaluationModelManagement();
 
   const filteredDeployments = getFilteredDeployments(searchTerm, selectedProvider, selectedStatus);
 
   const handleNext = async () => {
-    if (selectedDeployment) {
+    if (selectedDeployments.length > 0) {
       onComplete({
-        id: selectedDeployment.id,
-        name: selectedDeployment.name,
-        model: selectedDeployment.model,
-        provider: selectedDeployment.provider
+        deployments: selectedDeployments.map(deployment => ({
+          id: deployment.id,
+          name: deployment.name,
+          model: deployment.model,
+          provider: deployment.provider
+        }))
       });
     }
+  };
+
+  // UPDATED: Disabled Add Deployment handler
+  const handleAddDeployment = () => {
+    // TODO: Navigate to add deployment page later
+    console.log('Add Deployment functionality will be integrated later');
   };
 
   return (
@@ -54,15 +63,14 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
       {/* Step Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Choose Model Deployment
+          Choose Model Deployments
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Select a model deployment to evaluate against your dataset
+          Select one or more model deployments to evaluate against your dataset
         </p>
       </div>
 
-
-      {/* Main Content - Restored to original grid */}
+      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
@@ -76,7 +84,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
                 selectedStatus={selectedStatus}
                 onStatusChange={setSelectedStatus}
                 providers={providers}
-                onAddDeployment={() => setShowAddModal(true)}
+                onAddDeployment={handleAddDeployment} // UPDATED: Uses disabled handler
               />
             </div>
 
@@ -93,64 +101,49 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
               ) : (
                 <SelectDeployment
                   deployments={filteredDeployments}
-                  selectedDeployment={selectedDeployment}
+                  selectedDeployments={selectedDeployments}
                   onDeploymentSelect={handleDeploymentSelect}
-                  showWarning={() => {}}
-                  showSuccess={() => {}}
-                  showError={() => {}}
+                  onDeploymentDeselect={handleDeploymentDeselect}
+                  showWarning={(msg) => console.warn(msg)}
+                  showSuccess={(msg) => console.log(msg)}
+                  showError={(msg) => console.error(msg)}
                 />
               )}
             </div>
           </div>
         </div>
 
-        {/* Sidebar - Fixed sticky positioning like dataset guide */}
+        {/* Summary Panel */}
         <div className="lg:col-span-1">
-          <div className="hidden lg:block fixed top-32 w-80 max-h-[calc(100vh-10rem)] overflow-y-auto z-30" style={{ left: 'calc(75% + 1rem)' }}>
-            <DeploymentSummaryPanel selectedDeployment={selectedDeployment} />
-          </div>
-          {/* Mobile/tablet version - normal flow */}
-          <div className="lg:hidden">
-            <DeploymentSummaryPanel selectedDeployment={selectedDeployment} />
-          </div>
+          <DeploymentSummaryPanel selectedDeployments={selectedDeployments} />
         </div>
       </div>
 
-      {/* Navigation with proper spacing */}
-      <div className="lg:mr-80 xl:mr-96">
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={onBack}
-            className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
-          >
-            Back to Dataset Selection
-          </button>
+      {/* Navigation */}
+      <div className="flex justify-between items-center pt-6 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={onBack}
+          className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          Back
+        </button>
+        
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Step 2 of 5
+          </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Step 2 of 5
-            </div>
-            
-            <button
-              onClick={handleNext}
-              disabled={!selectedDeployment}
-              className="flex items-center px-6 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next: Configure Metrics
-            </button>
-          </div>
+          <button
+            onClick={handleNext}
+            disabled={selectedDeployments.length === 0}
+            className="flex items-center px-6 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Next: Configure Metrics
+          </button>
         </div>
       </div>
 
-      {/* Add Deployment Modal */}
-      {showAddModal && (
-        <AddDeploymentModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={(deployment) => {
-            setShowAddModal(false);
-          }}
-        />
-      )}
+      {/* REMOVED: Add Deployment Modal */}
     </div>
   );
 };

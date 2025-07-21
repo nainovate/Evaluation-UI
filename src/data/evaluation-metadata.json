@@ -2,14 +2,14 @@
   "evaluationSession": {
     "id": "eval_1752658961978_9v46ah7so",
     "createdAt": "2025-07-16T09:42:41.978Z",
-    "lastModified": "2025-07-21T04:10:53.391Z",
+    "lastModified": "2025-07-21T05:33:33.423Z",
     "status": "dataset_selected"
   },
   "dataset": {
     "uid": "eval_dataset_001",
     "id": "eval_dataset_001",
     "name": "Customer Support QA Evaluation",
-    "selectedAt": "2025-07-21T04:10:40.521Z",
+    "selectedAt": "2025-07-21T05:13:30.982Z",
     "taskType": "Question Answering",
     "rows": 500,
     "columns": [
@@ -20,11 +20,11 @@
     ]
   },
   "deployment": {
-    "id": "3",
-    "name": "gpt-4-turbo",
-    "model": "gpt-4-turbo-2024-04-09",
-    "provider": "OpenAI",
-    "selectedAt": "2025-07-21T04:10:45.937Z"
+    "id": "2",
+    "name": "staging-v2",
+    "model": "claude-3-haiku-20240307",
+    "provider": "Anthropic",
+    "selectedAt": "2025-07-21T05:33:33.408Z"
   },
   "metrics": {
     "categories": [
@@ -281,5 +281,14 @@
   "startedAt": "2025-07-18T10:29:21.257Z",
   "status": "running",
   "evaluationName": "eval",
-  "evaluationDescription": ""
+  "evaluationDescription": "",
+  "deployments": [
+    {
+      "id": "2",
+      "name": "staging-v2",
+      "model": "claude-3-haiku-20240307",
+      "provider": "Anthropic",
+      "selectedAt": "2025-07-21T05:33:33.408Z"
+    }
+  ]
 }
