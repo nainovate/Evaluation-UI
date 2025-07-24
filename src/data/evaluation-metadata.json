@@ -2,29 +2,29 @@
   "evaluationSession": {
     "id": "eval_1752658961978_9v46ah7so",
     "createdAt": "2025-07-16T09:42:41.978Z",
-    "lastModified": "2025-07-21T05:33:33.423Z",
+    "lastModified": "2025-07-24T07:13:09.999Z",
     "status": "dataset_selected"
   },
   "dataset": {
-    "uid": "eval_dataset_001",
-    "id": "eval_dataset_001",
-    "name": "Customer Support QA Evaluation",
-    "selectedAt": "2025-07-21T05:13:30.982Z",
-    "taskType": "Question Answering",
-    "rows": 500,
+    "uid": "eval_dataset_002",
+    "id": "eval_dataset_002",
+    "name": "Text Summarization Benchmark",
+    "selectedAt": "2025-07-24T07:12:45.648Z",
+    "taskType": "Summarization",
+    "rows": 1000,
     "columns": [
-      "question",
-      "expected_answer",
-      "context",
-      "category"
+      "input_text",
+      "reference_summary",
+      "length_constraint",
+      "domain"
     ]
   },
   "deployment": {
-    "id": "2",
-    "name": "staging-v2",
-    "model": "claude-3-haiku-20240307",
-    "provider": "Anthropic",
-    "selectedAt": "2025-07-21T05:33:33.408Z"
+    "id": "3",
+    "name": "gpt-4-turbo",
+    "model": "gpt-4-turbo-2024-04-09",
+    "provider": "OpenAI",
+    "selectedAt": "2025-07-24T07:13:00.196Z"
   },
   "metrics": {
     "categories": [
@@ -34,13 +34,13 @@
         "description": "Evaluate how well responses answer questions and stay grounded in context",
         "icon": "🎯",
         "color": "indigo",
-        "selected": false,
+        "selected": true,
         "subMetrics": [
           {
             "id": "answer-relevancy",
             "name": "Answer Relevancy",
             "description": "Measures how relevant the answer is to the given question",
-            "enabled": false
+            "enabled": true
           },
           {
             "id": "faithfulness",
@@ -62,13 +62,13 @@
         "description": "Measure how well models comprehend and utilize provided context",
         "icon": "📊",
         "color": "green",
-        "selected": true,
+        "selected": false,
         "subMetrics": [
           {
             "id": "context-recall",
             "name": "Context Recall",
             "description": "Measures how well the model recalls information from the context",
-            "enabled": true
+            "enabled": false
           },
           {
             "id": "factual-consistency",
@@ -135,14 +135,14 @@
         ]
       }
     ],
-    "selectedCategory": "context-understanding",
+    "selectedCategory": "answer-quality",
     "totalSelected": 1,
     "configuration": {
       "evaluationModel": "gpt-4",
       "batchSize": 50,
       "timeout": 30
     },
-    "configuredAt": "2025-07-21T04:10:53.371Z"
+    "configuredAt": "2025-07-24T07:13:09.968Z"
   },
   "execution": {
     "startedAt": null,
@@ -284,11 +284,11 @@
   "evaluationDescription": "",
   "deployments": [
     {
-      "id": "2",
-      "name": "staging-v2",
-      "model": "claude-3-haiku-20240307",
-      "provider": "Anthropic",
-      "selectedAt": "2025-07-21T05:33:33.408Z"
+      "id": "3",
+      "name": "gpt-4-turbo",
+      "model": "gpt-4-turbo-2024-04-09",
+      "provider": "OpenAI",
+      "selectedAt": "2025-07-24T07:13:00.196Z"
     }
   ]
 }

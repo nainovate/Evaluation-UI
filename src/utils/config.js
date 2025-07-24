@@ -1,22 +1,23 @@
 export const evaluation = {
   flow: [
-    'Data selection',
-    'Choose model', 
-    'Configure metrics',
-    'Review & run',
+    'Select Payload',
+    'Select Model',
+    'Set Metrics',
+    'Review & Launch',
     'Success'
   ],
   state: [
-    'Dataset Loading',
-    'Model Setup', 
-    'Evaluation',
-    'Analysis'
+  'Loading Dataset',
+  'Initializing Model',
+  'Running Evaluation',
+  'Calculating Metrics',
+  'Analyzing Results'
   ],
+
   status: [
     'Completed',
     'Queued',
-    'Running', 
+    'In Progress', 
     'Failed',
-    'Created'
   ]
 };

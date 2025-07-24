@@ -493,7 +493,7 @@ export async function updateEvaluationDatasetSelection(dataset: EvaluationDatase
     
     return true;
   } catch (error) {
-    console.error('Failed to update evaluation dataset selection:', error);
+    console.error('Failed to update evaluation Payload selection:', error);
     return false;
   }
 }

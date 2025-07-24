@@ -41,9 +41,9 @@ export function useEvaluationDatasetManagement() {
       
       try {
         await updateEvaluationDatasetSelection(dataset);
-        console.log('Evaluation dataset selection saved to metadata:', dataset.uid || dataset.id);
+        console.log('Evaluation Payload selection saved to metadata:', dataset.uid || dataset.id);
       } catch (error) {
-        console.error('Failed to update evaluation metadata with dataset selection:', error);
+        console.error('Failed to update evaluation metadata with Payload selection:', error);
       }
     }
   };

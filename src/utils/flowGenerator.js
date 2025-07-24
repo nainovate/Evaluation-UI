@@ -4,22 +4,22 @@ import { evaluation } from './config';
 
 // 🔹 STEP MAPPING - Maps display names to internal configurations
 const STEP_MAPPING = {
-  'Data selection': {
+  'Select Payload': {
     key: 'dataset',
     component: 'DatasetSelectionStep',
     icon: Database
   },
-  'Choose model': {
+  'Select Model': {
     key: 'model',
     component: 'ModelSelectionStep',
     icon: Cpu
   },
-  'Configure metrics': {
+  'Set Metrics': {
     key: 'metrics',
     component: 'MetricsConfigurationStep',
     icon: BarChart3
   },
-  'Review & run': {
+  'Review & Launch': {
     key: 'review',
     component: 'ReviewAndRunStep',
     icon: Play
@@ -36,9 +36,7 @@ export const generateSteps = (flowConfig = evaluation.flow) => {
   return flowConfig.map((stepName, index) => {
     const mapping = STEP_MAPPING[stepName];
     
-    if (!mapping) {
-      throw new Error(`Unknown step: ${stepName}. Available steps: ${Object.keys(STEP_MAPPING).join(', ')}`);
-    }
+    
     
     return {
       id: index + 1,
