@@ -56,47 +56,73 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
   if (currentTaskType) {
     // Task-specific validation
     const taskConfig = {
-      'Question Answering': ['question', 'expected_answer', 'context'],
-      'Summarization': ['input_text', 'reference_summary'],
-      'Classification': ['input_text', 'expected_label'],
-      'Structured Output': ['input_text', 'expected_json', 'schema_type'],
-      'Conversational QA': ['conversation_history', 'question', 'expected_answer'],
-      'Retrieval': ['query', 'relevant_documents', 'irrelevant_documents']
+      'Question Answering': {
+        mandatory: ['question', 'expected_answer', 'generated_answer'],
+        optional: ['context', 'reference', 'ground_truth', 'metadata']
+      },
+      'Summarization': {
+        mandatory: ['input_text', 'expected_summary', 'generated_summary'],
+        optional: ['reference_summary', 'metadata', 'source_title']
+      },
+      'Conversational QA': {
+        mandatory: ['conversation_history', 'question', 'expected_answer', 'generated_answer'],
+        optional: ['context', 'turn_id', 'metadata']
+      },
+      'Retrieval (RAG)': {
+        mandatory: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer'],
+        optional: ['ground_truth_docs', 'reference', 'metadata']
+      },
+      'Classification': {
+        mandatory: ['input_text', 'expected_label', 'predicted_label'],
+        optional: ['label_confidence', 'metadata', 'reasoning']
+      },
+      'Structured Output Generation': {
+        mandatory: ['input_instruction', 'expected_output', 'generated_output'],
+        optional: ['format_schema', 'reference', 'metadata']
+      },
+      'Open-ended Generation': {
+        mandatory: ['prompt', 'generated_output'],
+        optional: ['reference_output', 'feedback', 'toxicity_flag', 'metadata']
+      }
     }[currentTaskType];
 
     if (taskConfig) {
-      missingColumns = taskConfig.filter(col => 
+      missingColumns = taskConfig.mandatory.filter(col =>
         !previewData.columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
       );
       hasRequiredColumns = missingColumns.length === 0;
     }
   } else {
-    // General validation
-    const hasInputColumn = previewData.columns.some(col => 
-      col.toLowerCase().includes('input') || 
+    // General validation - updated to check for generated output
+    const hasInputColumn = previewData.columns.some(col =>
+      col.toLowerCase().includes('input') ||
       col.toLowerCase().includes('question') ||
       col.toLowerCase().includes('text') ||
       col.toLowerCase().includes('prompt') ||
       col.toLowerCase().includes('query') ||
-      col.toLowerCase().includes('conversation')
+      col.toLowerCase().includes('conversation') ||
+      col.toLowerCase().includes('instruction')
     );
-    
-    const hasOutputColumn = previewData.columns.some(col => 
-      col.toLowerCase().includes('output') || 
-      col.toLowerCase().includes('answer') ||
+
+    const hasExpectedColumn = previewData.columns.some(col =>
       col.toLowerCase().includes('expected') ||
       col.toLowerCase().includes('reference') ||
       col.toLowerCase().includes('target') ||
-      col.toLowerCase().includes('ground_truth') ||
-      col.toLowerCase().includes('label') ||
-      col.toLowerCase().includes('json') ||
-      col.toLowerCase().includes('documents')
+      col.toLowerCase().includes('ground_truth')
     );
-    
-    hasRequiredColumns = hasInputColumn && hasOutputColumn;
+
+    const hasGeneratedColumn = previewData.columns.some(col =>
+      col.toLowerCase().includes('generated') ||
+      col.toLowerCase().includes('predicted') ||
+      col.toLowerCase().includes('output')
+    );
+
+    hasRequiredColumns = hasInputColumn && hasExpectedColumn && hasGeneratedColumn;
     if (!hasInputColumn) missingColumns.push('input column');
-    if (!hasOutputColumn) missingColumns.push('expected output column');
+    if (!hasExpectedColumn) missingColumns.push('expected output column');
+    if (!hasGeneratedColumn) missingColumns.push('generated output column');
   }
+
   const canProceed = hasRequiredColumns;
   const canSave = previewData.isNewUpload ? hasRequiredColumns : true;
 
@@ -105,8 +131,8 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
       const datasetData = {
         name: title || previewData.filename.replace(/\.[^/.]+$/, ""),
         description: description || `Uploaded evaluation dataset from ${previewData.filename}`,
-        format: previewData.filename.toLowerCase().endsWith('.csv') ? 'CSV' : 
-                previewData.filename.toLowerCase().endsWith('.json') ? 'JSON' : 'YAML',
+        format: previewData.filename.toLowerCase().endsWith('.csv') ? 'CSV' :
+          previewData.filename.toLowerCase().endsWith('.json') ? 'JSON' : 'YAML',
         taskType: taskType || 'General Evaluation',
         samples: previewData.data.length,
         size: previewData.statistics?.file_size_kb ? previewData.statistics.file_size_kb * 1024 : previewData.data.length * 100,
@@ -127,8 +153,8 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
         const datasetData = {
           name: title || previewData.filename.replace(/\.[^/.]+$/, ""),
           description: description || `Uploaded evaluation dataset from ${previewData.filename}`,
-          format: previewData.filename.toLowerCase().endsWith('.csv') ? 'CSV' : 
-                  previewData.filename.toLowerCase().endsWith('.json') ? 'JSON' : 'YAML',
+          format: previewData.filename.toLowerCase().endsWith('.csv') ? 'CSV' :
+            previewData.filename.toLowerCase().endsWith('.json') ? 'JSON' : 'YAML',
           taskType: taskType || 'General Evaluation',
           samples: previewData.data.length,
           size: previewData.statistics?.file_size_kb ? previewData.statistics.file_size_kb * 1024 : previewData.data.length * 100,
@@ -193,12 +219,13 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
                         <p className="mt-2 text-xs">
                           Required columns for {currentTaskType}: {
                             {
-                              'Question Answering': 'question, expected_answer, context',
-                              'Summarization': 'input_text, reference_summary',
-                              'Classification': 'input_text, expected_label',
-                              'Structured Output': 'input_text, expected_json, schema_type',
-                              'Conversational QA': 'conversation_history, question, expected_answer',
-                              'Retrieval': 'query, relevant_documents, irrelevant_documents'
+                              'Question Answering': 'question, expected_answer, generated_answer',
+                              'Summarization': 'input_text, expected_summary, generated_summary',
+                              'Conversational QA': 'conversation_history, question, expected_answer, generated_answer',
+                              'Retrieval (RAG)': 'query, retrieved_documents, expected_answer, generated_answer',
+                              'Classification': 'input_text, expected_label, predicted_label',
+                              'Structured Output Generation': 'input_instruction, expected_output, generated_output',
+                              'Open-ended Generation': 'prompt, generated_output'
                             }[currentTaskType]
                           }
                         </p>
@@ -281,25 +308,24 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
             </h3>
             <div className="flex flex-wrap gap-2">
               {previewData.columns.map((column) => {
-                const isInputCol = column.toLowerCase().includes('input') || 
-                                  column.toLowerCase().includes('question') ||
-                                  column.toLowerCase().includes('text') ||
-                                  column.toLowerCase().includes('prompt');
-                const isOutputCol = column.toLowerCase().includes('output') || 
-                                   column.toLowerCase().includes('answer') ||
-                                   column.toLowerCase().includes('expected') ||
-                                   column.toLowerCase().includes('reference');
-                
+                const isInputCol = column.toLowerCase().includes('input') ||
+                  column.toLowerCase().includes('question') ||
+                  column.toLowerCase().includes('text') ||
+                  column.toLowerCase().includes('prompt');
+                const isOutputCol = column.toLowerCase().includes('output') ||
+                  column.toLowerCase().includes('answer') ||
+                  column.toLowerCase().includes('expected') ||
+                  column.toLowerCase().includes('reference');
+
                 return (
                   <span
                     key={column}
-                    className={`inline-block px-3 py-1 text-sm rounded-full ${
-                      isInputCol
+                    className={`inline-block px-3 py-1 text-sm rounded-full ${isInputCol
                         ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800'
                         : isOutputCol
-                        ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
                   >
                     {column}
                     {isInputCol && ' (Input)'}
@@ -358,16 +384,15 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
           >
             Cancel
           </button>
-          
+
           {previewData.isNewUpload ? (
             <button
               onClick={handleNext}
               disabled={!canProceed}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                canProceed
+              className={`px-4 py-2 rounded-md transition-colors ${canProceed
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
+                }`}
             >
               Save & Select Dataset
             </button>
@@ -375,11 +400,10 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
             <button
               onClick={handleNext}
               disabled={!canProceed}
-              className={`px-4 py-2 rounded-md transition-colors ${
-                canProceed
+              className={`px-4 py-2 rounded-md transition-colors ${canProceed
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
+                }`}
             >
               Select Dataset
             </button>

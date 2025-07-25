@@ -1,5 +1,4 @@
-import fs from 'fs/promises';
-import path from 'path';
+// src/utils/evaluationUtils.ts - Simplified with direct mock data (no backend)
 
 // Types for evaluation metrics
 export interface SubMetric {
@@ -56,6 +55,7 @@ export interface EvaluationDataset {
   taskType?: string;
   tags?: string[];
   format?: 'CSV' | 'JSON' | 'YAML';
+  preview?: any[];
 }
 
 export interface EvaluationMetadata {
@@ -81,6 +81,13 @@ export interface EvaluationMetadata {
     provider: string | null;
     selectedAt: string | null;
   };
+  deployments?: Array<{
+    id: string;
+    name: string;
+    model: string;
+    provider: string;
+    selectedAt: string;
+  }>;
   metrics?: {
     categories: MetricCategory[];
     selectedCategory: string | null;
@@ -96,30 +103,250 @@ export interface EvaluationMetadata {
     evaluationName?: string | null;
     evaluationDescription?: string | null;
   };
+  selectedDataset?: EvaluationDataset;
+  selectedModel?: any;
+  selectedMetrics?: string[];
+  configuration?: any;
 }
 
-// Generate unique identifier
-export const generateUID = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+// Define mandatory and optional columns for each task type - UPDATED
+const TASK_TYPE_COLUMNS = {
+  'Question Answering': {
+    mandatory: ['question', 'expected_answer', 'generated_answer'],
+    optional: ['context', 'reference', 'ground_truth', 'metadata']
+  },
+  'Summarization': {
+    mandatory: ['input_text', 'expected_summary', 'generated_summary'],
+    optional: ['reference_summary', 'metadata', 'source_title']
+  },
+  'Conversational QA': {
+    mandatory: ['conversation_history', 'question', 'expected_answer', 'generated_answer'],
+    optional: ['context', 'turn_id', 'metadata']
+  },
+  'Retrieval (RAG)': {
+    mandatory: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer'],
+    optional: ['ground_truth_docs', 'reference', 'metadata']
+  },
+  'Classification': {
+    mandatory: ['input_text', 'expected_label', 'predicted_label'],
+    optional: ['label_confidence', 'metadata', 'reasoning']
+  },
+  'Structured Output Generation': {
+    mandatory: ['input_instruction', 'expected_output', 'generated_output'],
+    optional: ['format_schema', 'reference', 'metadata']
+  },
+  'Open-ended Generation': {
+    mandatory: ['prompt', 'generated_output'],
+    optional: ['reference_output', 'feedback', 'toxicity_flag', 'metadata']
+  },
+  // Keep backward compatibility with old names
+  'Structured Output': {
+    mandatory: ['input_text', 'expected_json', 'schema_type'],
+    optional: ['difficulty']
+  },
+  'Retrieval': {
+    mandatory: ['query', 'relevant_documents', 'irrelevant_documents'],
+    optional: ['relevance_scores']
+  }
 };
 
-// Generate unique evaluation session ID
-export function generateEvaluationSessionId(): string {
-  return `eval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+// MOCK DEPLOYMENTS DATA - Direct mock data for no backend
+const mockDeployments: Deployment[] = [
+  {
+    id: 'deploy_001',
+    name: 'GPT-4 Production',
+    model: 'gpt-4-turbo',
+    status: 'active',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    provider: 'OpenAI',
+    region: 'us-east-1',
+    lastUpdated: '2024-01-20T10:30:00Z',
+    responseTime: 1200,
+    uptime: 99.9,
+    description: 'Production deployment of GPT-4 Turbo for general purpose evaluation',
+    version: '2024-01-25'
+  },
+  {
+    id: 'deploy_002',
+    name: 'Claude-3 Sonnet',
+    model: 'claude-3-sonnet',
+    status: 'active',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    provider: 'Anthropic',
+    region: 'us-west-2',
+    lastUpdated: '2024-01-19T15:45:00Z',
+    responseTime: 950,
+    uptime: 99.8,
+    description: 'Claude-3 Sonnet deployment for balanced performance and cost',
+    version: '2024-01-15'
+  },
+  {
+    id: 'deploy_003',
+    name: 'Gemini Pro',
+    model: 'gemini-pro',
+    status: 'active',
+    endpoint: 'https://generativelanguage.googleapis.com/v1/models/gemini-pro',
+    provider: 'Google',
+    region: 'us-central1',
+    lastUpdated: '2024-01-18T09:20:00Z',
+    responseTime: 800,
+    uptime: 99.7,
+    description: 'Google Gemini Pro for multimodal evaluation tasks',
+    version: '2024-01-10'
+  },
+  {
+    id: 'deploy_004',
+    name: 'Llama-2 70B',
+    model: 'llama-2-70b-chat',
+    status: 'inactive',
+    endpoint: 'https://api.together.xyz/inference',
+    provider: 'Together AI',
+    region: 'us-west-1',
+    lastUpdated: '2024-01-15T14:30:00Z',
+    responseTime: 1500,
+    uptime: 95.2,
+    description: 'Llama-2 70B Chat model for open-source evaluation',
+    version: '2023-12-01'
+  },
+  {
+    id: 'deploy_005',
+    name: 'GPT-3.5 Turbo',
+    model: 'gpt-3.5-turbo',
+    status: 'active',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    provider: 'OpenAI',
+    region: 'us-east-1',
+    lastUpdated: '2024-01-21T11:15:00Z',
+    responseTime: 600,
+    uptime: 99.9,
+    description: 'Cost-effective GPT-3.5 Turbo for high-volume evaluations',
+    version: '2024-01-20'
+  },
+  {
+    id: 'deploy_006',
+    name: 'Claude-3 Haiku',
+    model: 'claude-3-haiku',
+    status: 'error',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    provider: 'Anthropic',
+    region: 'eu-west-1',
+    lastUpdated: '2024-01-16T08:45:00Z',
+    responseTime: 400,
+    uptime: 87.3,
+    description: 'Fast and lightweight Claude-3 Haiku - currently experiencing issues',
+    version: '2024-01-05'
+  }
+];
 
-// Generate a unique identifier for evaluation datasets
-export function generateEvaluationDatasetUID(): string {
-  return `eval_dataset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
+// MOCK EVALUATION DATASETS - Direct mock data for no backend
+const mockEvaluationDatasets: EvaluationDataset[] = [
+  {
+    id: 'eval_dataset_001',
+    uid: 'eval_dataset_001',
+    name: 'Customer Support QA',
+    description: 'Question answering dataset for customer support evaluation with generated responses',
+    size: 2048000,
+    status: 'valid',
+    columns: ['question', 'expected_answer', 'generated_answer', 'context', 'metadata'],
+    rows: 1000,
+    uploadedAt: '2024-01-10T14:30:00Z',
+    taskType: 'Question Answering',
+    tags: ['customer-support', 'qa', 'evaluation'],
+    format: 'YAML'
+  },
+  {
+    id: 'eval_dataset_002',
+    uid: 'eval_dataset_002',
+    name: 'News Article Summarization',
+    description: 'Summarization evaluation with expected and generated summaries',
+    size: 3584000,
+    status: 'valid',
+    columns: ['input_text', 'expected_summary', 'generated_summary', 'source_title', 'metadata'],
+    rows: 500,
+    uploadedAt: '2024-01-12T09:15:00Z',
+    taskType: 'Summarization',
+    tags: ['summarization', 'news', 'evaluation'],
+    format: 'YAML'
+  },
+  {
+    id: 'eval_dataset_003',
+    uid: 'eval_dataset_003',
+    name: 'Sentiment Classification',
+    description: 'Text classification evaluation with predictions and confidence scores',
+    size: 1536000,
+    status: 'valid',
+    columns: ['input_text', 'expected_label', 'predicted_label', 'label_confidence', 'reasoning'],
+    rows: 2000,
+    uploadedAt: '2024-01-13T16:45:00Z',
+    taskType: 'Classification',
+    tags: ['classification', 'sentiment', 'evaluation'],
+    format: 'YAML'
+  },
+  {
+    id: 'eval_dataset_004',
+    uid: 'eval_dataset_004',
+    name: 'JSON Entity Extraction',
+    description: 'Structured output generation evaluation with format validation',
+    size: 2560000,
+    status: 'valid',
+    columns: ['input_instruction', 'expected_output', 'generated_output', 'format_schema', 'metadata'],
+    rows: 750,
+    uploadedAt: '2024-01-14T11:20:00Z',
+    taskType: 'Structured Output Generation',
+    tags: ['structured-output', 'json', 'evaluation'],
+    format: 'YAML'
+  },
+  {
+    id: 'eval_dataset_005',
+    uid: 'eval_dataset_005',
+    name: 'Multi-turn Conversation',
+    description: 'Conversational QA with context awareness and multi-turn dialogue evaluation',
+    size: 1536000,
+    status: 'valid',
+    columns: ['conversation_history', 'question', 'expected_answer', 'generated_answer', 'turn_id'],
+    rows: 800,
+    uploadedAt: '2024-01-15T13:10:00Z',
+    taskType: 'Conversational QA',
+    tags: ['conversational', 'multi-turn', 'evaluation'],
+    format: 'YAML'
+  },
+  {
+    id: 'eval_dataset_006',
+    uid: 'eval_dataset_006',
+    name: 'RAG Document Retrieval',
+    description: 'Retrieval-Augmented Generation evaluation with document relevance',
+    size: 2560000,
+    status: 'valid',
+    columns: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer', 'ground_truth_docs'],
+    rows: 300,
+    uploadedAt: '2024-01-16T09:30:00Z',
+    taskType: 'Retrieval (RAG)',
+    tags: ['rag', 'retrieval', 'evaluation'],
+    format: 'YAML'
+  },
+  {
+    id: 'eval_dataset_007',
+    uid: 'eval_dataset_007',
+    name: 'Creative Writing Evaluation',
+    description: 'Open-ended generation evaluation with creativity and safety assessments',
+    size: 1920000,
+    status: 'valid',
+    columns: ['prompt', 'generated_output', 'reference_output', 'feedback', 'toxicity_flag'],
+    rows: 400,
+    uploadedAt: '2024-01-17T15:20:00Z',
+    taskType: 'Open-ended Generation',
+    tags: ['generation', 'creative', 'evaluation'],
+    format: 'YAML'
+  }
+];
 
-// Default metadata structure
-const defaultEvaluationMetadata: EvaluationMetadata = {
+// Mock evaluation metadata
+let mockMetadata: EvaluationMetadata = {
   evaluationSession: {
     id: null,
     createdAt: null,
     lastModified: null,
-    status: 'not_started'
+    status: 'new'
   },
   dataset: {
     uid: null,
@@ -137,13 +364,14 @@ const defaultEvaluationMetadata: EvaluationMetadata = {
     provider: null,
     selectedAt: null
   },
+  deployments: [],
   metrics: {
     categories: [],
     selectedCategory: null,
     totalSelected: 0,
     configuration: {
-      evaluationModel: 'gpt-4',
-      batchSize: 50,
+      evaluationModel: 'gpt-4-turbo',
+      batchSize: 10,
       timeout: 30
     },
     configuredAt: null
@@ -158,204 +386,7 @@ const defaultEvaluationMetadata: EvaluationMetadata = {
   }
 };
 
-// Load evaluation metadata from storage
-export const loadEvaluationMetadata = async (): Promise<EvaluationMetadata> => {
-  try {
-    // Try API first
-    const response = await fetch('/api/evaluation-metadata');
-    if (response.ok) {
-      const data = await response.json();
-      return { ...defaultEvaluationMetadata, ...data };
-    }
-  } catch (error) {
-    console.error('API not available, falling back to localStorage');
-  }
-
-  // Fallback to localStorage
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('evaluation-metadata');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...defaultEvaluationMetadata, ...parsed };
-      }
-    }
-  } catch (error) {
-    console.error('Error loading from localStorage:', error);
-  }
-
-  return defaultEvaluationMetadata;
-};
-
-// Update evaluation metadata - UNIFIED VERSION
-export const updateEvaluationMetadata = async (updates: Partial<EvaluationMetadata>): Promise<EvaluationMetadata> => {
-  try {
-    const currentMetadata = await loadEvaluationMetadata();
-    
-    // Initialize session if not exists
-    if (!currentMetadata.evaluationSession.id && (updates.dataset || updates.deployment || updates.metrics)) {
-      currentMetadata.evaluationSession = {
-        id: generateEvaluationSessionId(),
-        createdAt: new Date().toISOString(),
-        lastModified: new Date().toISOString(),
-        status: 'in_progress'
-      };
-    }
-
-    const updatedMetadata = {
-      ...currentMetadata,
-      ...updates,
-      evaluationSession: {
-        ...currentMetadata.evaluationSession,
-        ...updates.evaluationSession,
-        lastModified: new Date().toISOString()
-      }
-    };
-
-    // Try to save via API
-    try {
-      const response = await fetch('/api/evaluation-metadata', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedMetadata),
-      });
-      
-      if (!response.ok) {
-        throw new Error('API call failed');
-      }
-    } catch (apiError) {
-      console.warn('API not available, using localStorage fallback');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('evaluation-metadata', JSON.stringify(updatedMetadata));
-      }
-    }
-
-    return updatedMetadata;
-  } catch (error) {
-    console.error('Error updating evaluation metadata:', error);
-    throw error;
-  }
-};
-
-// Mock data for evaluation datasets
-const mockEvaluationDatasets: EvaluationDataset[] = [
-  {
-    id: 'eval_dataset_001',
-    uid: 'eval_dataset_001',
-    name: 'Customer Support QA Evaluation',
-    description: 'Evaluation dataset for customer support chatbot performance with question-answer pairs',
-    size: 1024000,
-    status: 'valid',
-    columns: ['question', 'expected_answer', 'context', 'category'],
-    rows: 500,
-    uploadedAt: '2024-01-15T10:30:00Z',
-    taskType: 'Question Answering',
-    tags: ['customer-support', 'factual-qa', 'evaluation'],
-    format: 'CSV'
-  },
-  {
-    id: 'eval_dataset_002',
-    uid: 'eval_dataset_002',
-    name: 'Text Summarization Benchmark',
-    description: 'Standard benchmark for evaluating text summarization models with reference summaries',
-    size: 2048000,
-    status: 'valid',
-    columns: ['input_text', 'reference_summary', 'length_constraint', 'domain'],
-    rows: 1000,
-    uploadedAt: '2024-01-10T14:20:00Z',
-    taskType: 'Summarization',
-    tags: ['summarization', 'abstractive', 'evaluation'],
-    format: 'CSV'
-  },
-  {
-    id: 'eval_dataset_003',
-    uid: 'eval_dataset_003',
-    name: 'Incomplete Evaluation Set',
-    description: 'Missing reference outputs for proper evaluation - needs to be fixed',
-    size: 512000,
-    status: 'invalid',
-    columns: ['input_text'],
-    rows: 200,
-    uploadedAt: '2024-01-08T09:15:00Z',
-    taskType: 'Classification',
-    tags: ['incomplete', 'invalid'],
-    format: 'CSV'
-  },
-  {
-    id: 'eval_dataset_004',
-    uid: 'eval_dataset_004',
-    name: 'Structured Data Extraction',
-    description: 'JSON and table extraction tasks for evaluating structured output generation',
-    size: 3145728,
-    status: 'valid',
-    columns: ['input_text', 'expected_json', 'schema_type', 'difficulty'],
-    rows: 150,
-    uploadedAt: '2024-01-12T16:45:00Z',
-    taskType: 'Structured Output',
-    tags: ['json-generation', 'structured-output', 'evaluation'],
-    format: 'JSON'
-  },
-  {
-    id: 'eval_dataset_005',
-    uid: 'eval_dataset_005',
-    name: 'Multi-turn Conversation QA',
-    description: 'Conversational QA with context awareness and multi-turn dialogue evaluation',
-    size: 1536000,
-    status: 'valid',
-    columns: ['conversation_history', 'question', 'expected_answer', 'context'],
-    rows: 800,
-    uploadedAt: '2024-01-14T11:20:00Z',
-    taskType: 'Conversational QA',
-    tags: ['multi-turn', 'dialogue-qa', 'evaluation'],
-    format: 'CSV'
-  },
-  {
-    id: 'eval_dataset_006',
-    uid: 'eval_dataset_006',
-    name: 'Document Retrieval Benchmark',
-    description: 'Information retrieval evaluation with passage ranking and semantic search',
-    size: 2560000,
-    status: 'valid',
-    columns: ['query', 'relevant_documents', 'irrelevant_documents', 'relevance_scores'],
-    rows: 300,
-    uploadedAt: '2024-01-16T09:30:00Z',
-    taskType: 'Retrieval',
-    tags: ['document-retrieval', 'semantic-search', 'evaluation'],
-    format: 'CSV'
-  }
-];
-
-// Define mandatory and optional columns for each task type
-const TASK_TYPE_COLUMNS = {
-  'Question Answering': {
-    mandatory: ['question', 'expected_answer', 'context'],
-    optional: ['category']
-  },
-  'Summarization': {
-    mandatory: ['input_text', 'reference_summary'],
-    optional: ['length_constraint', 'domain']
-  },
-  'Classification': {
-    mandatory: ['input_text', 'expected_label'],
-    optional: ['category']
-  },
-  'Structured Output': {
-    mandatory: ['input_text', 'expected_json', 'schema_type'],
-    optional: ['difficulty']
-  },
-  'Conversational QA': {
-    mandatory: ['conversation_history', 'question', 'expected_answer'],
-    optional: ['context']
-  },
-  'Retrieval': {
-    mandatory: ['query', 'relevant_documents', 'irrelevant_documents'],
-    optional: ['relevance_scores']
-  }
-};
-
-// Validate evaluation dataset columns based on task type
+// Validate evaluation dataset columns based on task type - UPDATED
 export function validateEvaluationColumns(columns: string[], taskType?: string): string[] {
   const errors: string[] = [];
   
@@ -367,27 +398,37 @@ export function validateEvaluationColumns(columns: string[], taskType?: string):
       col.toLowerCase().includes('text') ||
       col.toLowerCase().includes('prompt') ||
       col.toLowerCase().includes('query') ||
-      col.toLowerCase().includes('conversation')
+      col.toLowerCase().includes('conversation') ||
+      col.toLowerCase().includes('instruction')
     );
     
-    const hasOutputColumn = columns.some(col => 
-      col.toLowerCase().includes('output') || 
-      col.toLowerCase().includes('answer') ||
+    const hasExpectedColumn = columns.some(col => 
       col.toLowerCase().includes('expected') ||
       col.toLowerCase().includes('reference') ||
       col.toLowerCase().includes('target') ||
-      col.toLowerCase().includes('ground_truth') ||
+      col.toLowerCase().includes('ground_truth')
+    );
+
+    const hasGeneratedColumn = columns.some(col => 
+      col.toLowerCase().includes('generated') ||
+      col.toLowerCase().includes('predicted') ||
+      col.toLowerCase().includes('output') ||
+      col.toLowerCase().includes('answer') ||
       col.toLowerCase().includes('label') ||
       col.toLowerCase().includes('json') ||
       col.toLowerCase().includes('documents')
     );
     
     if (!hasInputColumn) {
-      errors.push('Missing input column (should contain text/questions to evaluate)');
+      errors.push('Missing input column (should contain text/questions/prompts to evaluate)');
     }
     
-    if (!hasOutputColumn) {
+    if (!hasExpectedColumn) {
       errors.push('Missing expected output column (should contain reference answers/labels)');
+    }
+
+    if (!hasGeneratedColumn) {
+      errors.push('Missing generated output column (should contain model predictions/responses)');
     }
   } else {
     // Task-specific validation
@@ -406,24 +447,83 @@ export function validateEvaluationColumns(columns: string[], taskType?: string):
   return errors;
 }
 
-// Dataset management functions
-export async function loadEvaluationDatasets(): Promise<EvaluationDataset[]> {
-  try {
-    // In development, return mock data
-    if (process.env.NODE_ENV === 'development') {
-      return mockEvaluationDatasets;
-    }
-    
-    // TODO: Replace with API call
-    const EVALUATION_DATASETS_FILE = path.join(process.cwd(), 'src/data/evaluation-datasets.json');
-    const data = await fs.readFile(EVALUATION_DATASETS_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.log('Using mock evaluation datasets data');
-    return mockEvaluationDatasets;
-  }
+// NEW: Get column requirements for a specific task type
+export function getTaskTypeColumns(taskType: string) {
+  return TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS] || null;
 }
 
+// NEW: Check if a dataset has the required columns for a task type
+export function hasRequiredColumns(columns: string[], taskType: string): boolean {
+  const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
+  if (!taskConfig) return false;
+  
+  const missingMandatory = taskConfig.mandatory.filter(col => 
+    !columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
+  );
+  
+  return missingMandatory.length === 0;
+}
+
+// NEW: Get missing mandatory columns for a task type
+export function getMissingColumns(columns: string[], taskType: string): string[] {
+  const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
+  if (!taskConfig) return [];
+  
+  return taskConfig.mandatory.filter(col => 
+    !columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
+  );
+}
+
+// NEW: Get present optional columns for a task type
+export function getPresentOptionalColumns(columns: string[], taskType: string): string[] {
+  const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
+  if (!taskConfig) return [];
+  
+  return taskConfig.optional.filter(col =>
+    columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
+  );
+}
+
+// Export the task type columns configuration
+export { TASK_TYPE_COLUMNS };
+
+// Dataset management functions - DIRECT MOCK DATA (no backend)
+export async function loadEvaluationDatasets(): Promise<EvaluationDataset[]> {
+  // Return mock data directly since no backend
+  console.log('Using direct mock evaluation datasets data');
+  return mockEvaluationDatasets;
+}
+
+// Deployment management functions - DIRECT MOCK DATA (no backend)
+export async function getEvaluationDeployments(): Promise<Deployment[]> {
+  // Return mock data directly since no backend
+  console.log('Using direct mock deployment data');
+  return mockDeployments;
+}
+
+// Evaluation metadata management functions - DIRECT MOCK DATA (no backend)
+export async function getEvaluationMetadata(): Promise<EvaluationMetadata> {
+  // Return mock metadata directly since no backend
+  console.log('Using direct mock metadata');
+  return mockMetadata;
+}
+
+export async function updateEvaluationMetadata(updates: Partial<EvaluationMetadata>): Promise<void> {
+  // Update mock data directly since no backend
+  console.log('Updating mock metadata:', updates);
+  mockMetadata = { ...mockMetadata, ...updates };
+}
+
+// Utility functions for generating IDs
+export function generateEvaluationDatasetUID(): string {
+  return `eval_dataset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function generateEvaluationSessionUID(): string {
+  return `eval_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Additional utility functions that were missing
 export async function addEvaluationDataset(datasetData: any): Promise<boolean> {
   try {
     const newDataset: EvaluationDataset = {
@@ -440,10 +540,10 @@ export async function addEvaluationDataset(datasetData: any): Promise<boolean> {
       originalFileName: datasetData.originalFileName,
       taskType: datasetData.taskType,
       tags: datasetData.tags || [],
-      format: datasetData.format || 'CSV'
+      format: datasetData.format || 'YAML'
     };
 
-    // TODO: Replace with API call
+    // TODO: Save to data folder or API
     console.log('Would save evaluation dataset:', newDataset);
     return true;
   } catch (error) {
@@ -454,7 +554,7 @@ export async function addEvaluationDataset(datasetData: any): Promise<boolean> {
 
 export async function updateEvaluationDataset(datasetId: string, updates: Partial<EvaluationDataset>): Promise<boolean> {
   try {
-    // TODO: Replace with API call
+    // TODO: Update in data folder or API
     console.log('Would update evaluation dataset:', datasetId, updates);
     return true;
   } catch (error) {
@@ -465,7 +565,7 @@ export async function updateEvaluationDataset(datasetId: string, updates: Partia
 
 export async function deleteEvaluationDataset(datasetId: string): Promise<boolean> {
   try {
-    // TODO: Replace with API call
+    // TODO: Delete from data folder or API
     console.log('Would delete evaluation dataset:', datasetId);
     return true;
   } catch (error) {
@@ -478,7 +578,10 @@ export async function updateEvaluationDatasetSelection(dataset: EvaluationDatase
   try {
     await updateEvaluationMetadata({
       evaluationSession: {
-        status: 'dataset_selected'
+        status: 'dataset_selected',
+        id: null,
+        createdAt: null,
+        lastModified: null
       },
       dataset: {
         uid: dataset.uid || dataset.id,
@@ -493,257 +596,7 @@ export async function updateEvaluationDatasetSelection(dataset: EvaluationDatase
     
     return true;
   } catch (error) {
-    console.error('Failed to update evaluation Payload selection:', error);
+    console.error('Failed to update evaluation dataset selection:', error);
     return false;
   }
 }
-
-// Deployment management functions
-export async function getEvaluationDeployments(): Promise<Deployment[]> {
-  try {
-    const response = await fetch('/data/evaluation-deployments.json');
-    if (response.ok) {
-      return await response.json();
-    }
-  } catch (error) {
-    console.error('Error loading evaluation deployments:', error);
-  }
-  
-  // Return default mock data if file not found
-  return [
-    {
-      id: '1',
-      name: 'production-v1',
-      model: 'claude-3-sonnet-20240229',
-      status: 'active',
-      endpoint: 'https://api.anthropic.com/v1/messages',
-      provider: 'Anthropic',
-      region: 'us-east-1',
-      lastUpdated: '2024-01-15T10:30:00Z',
-      responseTime: 850,
-      uptime: 99.9,
-      description: 'Primary production deployment for customer-facing applications',
-      version: 'v1.2.0'
-    },
-    {
-      id: '2',
-      name: 'staging-v2',
-      model: 'claude-3-haiku-20240307',
-      status: 'active',
-      endpoint: 'https://api.anthropic.com/v1/messages',
-      provider: 'Anthropic',
-      region: 'us-west-2',
-      lastUpdated: '2024-01-14T14:20:00Z',
-      responseTime: 650,
-      uptime: 99.5,
-      description: 'Staging environment for testing new features and updates',
-      version: 'v2.0.0-beta'
-    },
-    {
-      id: '3',
-      name: 'gpt-4-turbo',
-      model: 'gpt-4-turbo-2024-04-09',
-      status: 'active',
-      endpoint: 'https://api.openai.com/v1/chat/completions',
-      provider: 'OpenAI',
-      region: 'us-central',
-      lastUpdated: '2024-01-16T09:15:00Z',
-      responseTime: 920,
-      uptime: 99.8,
-      description: 'OpenAI GPT-4 Turbo for comparison testing',
-      version: 'turbo-2024-04-09'
-    },
-    {
-      id: '4',
-      name: 'beta-test',
-      model: 'claude-3-opus-20240229',
-      status: 'inactive',
-      endpoint: 'https://api.anthropic.com/v1/messages',
-      provider: 'Anthropic',
-      region: 'eu-west-1',
-      lastUpdated: '2024-01-12T16:45:00Z',
-      responseTime: 1200,
-      uptime: 95.2,
-      description: 'Beta testing environment - currently offline',
-      version: 'v0.9.0-beta'
-    },
-    {
-      id: '5',
-      name: 'development-v3',
-      model: 'claude-3-sonnet-20240229',
-      status: 'error',
-      endpoint: 'https://dev.api.anthropic.com/v1/messages',
-      provider: 'Anthropic',
-      region: 'us-east-1',
-      lastUpdated: '2024-01-10T11:30:00Z',
-      responseTime: 0,
-      uptime: 87.3,
-      description: 'Development environment - experiencing connection issues',
-      version: 'v3.0.0-dev'
-    }
-  ];
-}
-
-export async function updateEvaluationModelSelection(deployment: Deployment): Promise<void> {
-  await updateEvaluationMetadata({
-    deployment: {
-      id: deployment.id,
-      name: deployment.name,
-      model: deployment.model,
-      provider: deployment.provider,
-      selectedAt: new Date().toISOString()
-    }
-  });
-}
-
-// Metrics configuration functions
-export const updateMetricsConfiguration = async (config: {
-  selectedCategory: MetricCategory;
-  selectedMetrics: MetricCategory[];
-  evaluationModel: string;
-  batchSize: number;
-  timeout: number;
-}): Promise<void> => {
-  try {
-    console.log('📊 Updating metrics configuration:', {
-      category: config.selectedCategory.name,
-      totalMetrics: config.selectedMetrics.reduce((total, cat) => 
-        total + cat.subMetrics.filter(sm => sm.enabled).length, 0
-      ),
-      model: config.evaluationModel,
-      batchSize: config.batchSize,
-      timeout: config.timeout
-    });
-
-    await updateEvaluationMetadata({
-      metrics: {
-        categories: config.selectedMetrics,
-        selectedCategory: config.selectedCategory.id,
-        totalSelected: config.selectedMetrics.reduce((total, cat) => 
-          total + cat.subMetrics.filter(sm => sm.enabled).length, 0
-        ),
-        configuration: {
-          evaluationModel: config.evaluationModel,
-          batchSize: config.batchSize,
-          timeout: config.timeout
-        },
-        configuredAt: new Date().toISOString()
-      }
-    });
-  } catch (error) {
-    console.error('Error updating metrics configuration:', error);
-    throw error;
-  }
-};
-
-// Validation functions
-export function validateDeploymentSelection(deployment: Deployment | null): {
-  isValid: boolean;
-  errors: string[];
-} {
-  const errors: string[] = [];
-
-  if (!deployment) {
-    errors.push('Please select a deployment');
-    return { isValid: false, errors };
-  }
-
-  if (deployment.status === 'error') {
-    errors.push('Selected deployment has connection issues');
-  }
-
-  if (deployment.uptime < 90) {
-    errors.push('Selected deployment has low uptime (<90%)');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-}
-
-export const validateMetricsConfiguration = (categories: MetricCategory[]): {
-  isValid: boolean;
-  errors: string[];
-} => {
-  const errors: string[] = [];
-  
-  const selectedCategories = categories.filter(cat => cat.selected);
-  if (selectedCategories.length === 0) {
-    errors.push('Please select at least one metric category');
-  }
-  
-  if (selectedCategories.length > 1) {
-    errors.push('Please select only one metric category');
-  }
-  
-  const selectedCategory = selectedCategories[0];
-  if (selectedCategory) {
-    const enabledMetrics = selectedCategory.subMetrics.filter(sm => sm.enabled);
-    if (enabledMetrics.length === 0) {
-      errors.push('Please select at least one metric from the selected category');
-    }
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-};
-
-// Utility functions
-export function formatDeploymentInfo(deployment: Deployment): {
-  displayName: string;
-  statusColor: string;
-  performanceScore: number;
-} {
-  const displayName = `${deployment.name} (${deployment.provider})`;
-  
-  let statusColor = 'gray';
-  switch (deployment.status) {
-    case 'active':
-      statusColor = 'green';
-      break;
-    case 'inactive':
-      statusColor = 'yellow';
-      break;
-    case 'error':
-      statusColor = 'red';
-      break;
-  }
-
-  // Calculate performance score based on uptime and response time
-  const responseTimeScore = Math.max(0, (2000 - deployment.responseTime) / 2000) * 50;
-  const uptimeScore = deployment.uptime * 0.5;
-  const performanceScore = Math.round(responseTimeScore + uptimeScore);
-
-  return {
-    displayName,
-    statusColor,
-    performanceScore
-  };
-}
-
-export const getMetricsSummary = (categories: MetricCategory[]): {
-  selectedCategory: string | null;
-  totalMetrics: number;
-  metricsList: string[];
-} => {
-  const selectedCategory = categories.find(cat => cat.selected);
-  
-  if (!selectedCategory) {
-    return {
-      selectedCategory: null,
-      totalMetrics: 0,
-      metricsList: []
-    };
-  }
-  
-  const enabledMetrics = selectedCategory.subMetrics.filter(sm => sm.enabled);
-  
-  return {
-    selectedCategory: selectedCategory.name,
-    totalMetrics: enabledMetrics.length,
-    metricsList: enabledMetrics.map(sm => sm.name)
-  };
-};
