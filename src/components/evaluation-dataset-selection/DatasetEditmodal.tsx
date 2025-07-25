@@ -26,9 +26,10 @@ export const DatasetEditModal: React.FC<DatasetEditModalProps> = ({
     'Question Answering',
     'Summarization', 
     'Classification',
-    'Structured Output',
+    'Structured Output Generation',
     'Conversational QA',
-    'Retrieval'
+    'Retrieval',
+    'Open-ended Generation'
   ];
 
   useEffect(() => {

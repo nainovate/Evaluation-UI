@@ -5,7 +5,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../../../components/ThemeToggle';
-import { useToast } from '../../../hooks/useToast';
+// Remove useToast import if not used anymore
+// import { useToast } from '../../../hooks/useToast';
 import { ToastContainer } from '../../../components/common/ToastNotification';
 import { 
   loadEvaluationMetadata, 
@@ -44,9 +45,19 @@ const STEP_COMPONENTS = {
 
 export default function EvaluationStartPage() {
   const router = useRouter();
-  const { showSuccess, showError } = useToast();
   
-  // 🔸 STATE MANAGEMENT
+  // ----- Toast notifications state -----
+  const [toasts, setToasts] = useState([]);
+  const addToast = (message: string, type: 'success' | 'error') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+  // ----- End toast notifications state -----
+
+  // ----- STATE MANAGEMENT -----
   const [currentStep, setCurrentStep] = useState(1);
   const [metadata, setMetadata] = useState<EvaluationMetadata | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,7 +121,7 @@ export default function EvaluationStartPage() {
             rows: data.rows,
             columns: data.columns
           };
-          showSuccess('Dataset selected successfully');
+          addToast('Dataset selected successfully', 'success');
           break;
           
         case 'model':
@@ -121,7 +132,7 @@ export default function EvaluationStartPage() {
             provider: data.provider,
             selectedAt: new Date().toISOString()
           };
-          showSuccess('Model deployment selected successfully');
+          addToast('Model deployment selected successfully', 'success');
           break;
           
         case 'metrics':
@@ -132,14 +143,14 @@ export default function EvaluationStartPage() {
             configuration: data.configuration,
             results: null
           };
-          showSuccess('Metrics configuration saved successfully');
+          addToast('Metrics configuration saved successfully', 'success');
           break;
           
         case 'review':
           updatedMetadata.name = data.name;
           updatedMetadata.description = data.description;
           updatedMetadata.status = 'running';
-          showSuccess('Evaluation started successfully');
+          addToast('Evaluation started successfully', 'success');
           break;
       }
       
@@ -153,7 +164,7 @@ export default function EvaluationStartPage() {
       
     } catch (err) {
       console.error('Error completing step:', err);
-      showError('Failed to complete step');
+      addToast('Failed to complete step', 'error');
     } finally {
       setLoading(false);
     }
@@ -253,14 +264,9 @@ export default function EvaluationStartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Theme Toggle - positioned absolutely */}
-        <div className="absolute top-4 right-4">
-          <ThemeToggle />
-        </div>
-        {/* Progress Stepper */}
-        <div className="mb-8">
+      {/* Fixed header for the EvaluationStepper */}
+      <header className="fixed top-0 left-0 right-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <EvaluationStepper
             steps={flowNavigator.getSteps()}
             currentStep={currentStep}
@@ -268,15 +274,19 @@ export default function EvaluationStartPage() {
             metadata={metadata}
           />
         </div>
-
+      </header>
+      {/* Main Content with top padding to offset fixed header */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 py-8">
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         {/* Step Content */}
         {renderCurrentStep()}
       </main>
 
       {/* Toast Notifications */}
-      <ToastContainer toasts={[]} removeToast={function (id: string): void {
-        throw new Error('Function not implemented.');
-      } } />
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

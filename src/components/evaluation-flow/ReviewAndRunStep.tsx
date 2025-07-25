@@ -66,7 +66,7 @@ export const ReviewAndRunStep: React.FC<ReviewAndRunStepProps> = ({
       {/* Step Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Review & Run Evaluation
+          Review & Launch Evaluation
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
           Review your configuration and start the evaluation process
