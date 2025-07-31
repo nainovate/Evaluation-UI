@@ -1,24 +1,33 @@
 import { useState, useEffect } from 'react';
-import { getEvaluationDeployments, updateEvaluationMetadata, getEvaluationMetadata } from '../utils/evaluationUtils';
-import type { Deployment } from '../types';
+import { 
+  getEvaluationDeployments, // 🔥 CHANGED: Now uses API-based function
+  updateEvaluationMetadata, 
+  getEvaluationMetadata 
+} from '../utils/evaluationUtils';
+import type { Deployment } from '../utils/evaluationUtils';
 
 export function useEvaluationModelManagement() {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
-  const [selectedDeployments, setSelectedDeployments] = useState<Deployment[]>([]); // CHANGED: Multiple deployments
+  const [selectedDeployments, setSelectedDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDeployments();
-    loadSelectedDeployments(); // CHANGED: Load multiple deployments
+    loadSelectedDeployments();
   }, []);
 
+  // 🔥 CHANGED: Now uses API-based function instead of hardcoded data
   const loadDeployments = async () => {
     try {
       setLoading(true);
+      console.log('Loading deployments from API...');
+      
       const data = await getEvaluationDeployments();
       setDeployments(data);
       setError(null);
+      
+      console.log('Successfully loaded deployments:', data.length);
     } catch (err) {
       setError('Failed to load deployments');
       console.error('Error loading deployments:', err);
@@ -27,7 +36,7 @@ export function useEvaluationModelManagement() {
     }
   };
 
-  // CHANGED: Load multiple selected deployments from metadata
+  // Load multiple selected deployments from metadata
   const loadSelectedDeployments = async () => {
     try {
       const metadata = await getEvaluationMetadata();
@@ -36,14 +45,14 @@ export function useEvaluationModelManagement() {
       if (metadata.deployments && Array.isArray(metadata.deployments) && metadata.deployments.length > 0) {
         const deploymentList = await getEvaluationDeployments();
         const selected = deploymentList.filter(d => 
-          metadata.deployments.some((md: any) => md.id === d.id)
+          metadata.deployments!.some((md: any) => md.id === d.id)
         );
         setSelectedDeployments(selected);
       }
       // Fallback: Check for legacy single deployment format for backward compatibility
       else if (metadata.deployment && metadata.deployment.id) {
         const deploymentList = await getEvaluationDeployments();
-        const deployment = deploymentList.find(d => d.id === metadata.deployment.id);
+        const deployment = deploymentList.find(d => d.id === metadata.deployment!.id);
         if (deployment) {
           setSelectedDeployments([deployment]); // Convert single to array
         }
@@ -53,7 +62,7 @@ export function useEvaluationModelManagement() {
     }
   };
 
-  // CHANGED: Handle selecting a deployment (add to array)
+  // Handle selecting a deployment (add to array)
   const handleDeploymentSelect = async (deployment: Deployment) => {
     // Check if deployment is already selected
     const isAlreadySelected = selectedDeployments.some(d => d.id === deployment.id);
@@ -70,19 +79,21 @@ export function useEvaluationModelManagement() {
         deployments: newSelected.map(d => ({
           id: d.id,
           name: d.name,
-          model: d.model,
-          provider: d.provider,
+          model: d.model || d.name,
+          provider: d.provider || 'Unknown',
           selectedAt: new Date().toISOString()
         })),
         // Keep legacy single deployment for backward compatibility
         deployment: {
           id: newSelected[0].id,
           name: newSelected[0].name,
-          model: newSelected[0].model,
-          provider: newSelected[0].provider,
+          model: newSelected[0].model || newSelected[0].name,
+          provider: newSelected[0].provider || 'Unknown',
           selectedAt: new Date().toISOString()
         }
       });
+      
+      console.log('Deployment selection updated:', deployment.name);
     } catch (err) {
       console.error('Error updating deployment selection:', err);
       // Revert on error
@@ -90,7 +101,7 @@ export function useEvaluationModelManagement() {
     }
   };
 
-  // NEW: Handle deselecting a deployment (remove from array)
+  // Handle deselecting a deployment (remove from array)
   const handleDeploymentDeselect = async (deployment: Deployment) => {
     const newSelected = selectedDeployments.filter(d => d.id !== deployment.id);
     setSelectedDeployments(newSelected);
@@ -101,8 +112,8 @@ export function useEvaluationModelManagement() {
         deployments: newSelected.map(d => ({
           id: d.id,
           name: d.name,
-          model: d.model,
-          provider: d.provider,
+          model: d.model || d.name,
+          provider: d.provider || 'Unknown',
           selectedAt: new Date().toISOString()
         }))
       };
@@ -112,8 +123,8 @@ export function useEvaluationModelManagement() {
         updateData.deployment = {
           id: newSelected[0].id,
           name: newSelected[0].name,
-          model: newSelected[0].model,
-          provider: newSelected[0].provider,
+          model: newSelected[0].model || newSelected[0].name,
+          provider: newSelected[0].provider || 'Unknown',
           selectedAt: new Date().toISOString()
         };
       } else {
@@ -122,6 +133,7 @@ export function useEvaluationModelManagement() {
       }
 
       await updateEvaluationMetadata(updateData);
+      console.log('Deployment deselection updated');
     } catch (err) {
       console.error('Error updating deployment selection:', err);
       // Revert on error
@@ -129,7 +141,7 @@ export function useEvaluationModelManagement() {
     }
   };
 
-  // NEW: Clear all selected deployments
+  // Clear all selected deployments
   const handleClearAllDeployments = async () => {
     try {
       setSelectedDeployments([]);
@@ -137,12 +149,13 @@ export function useEvaluationModelManagement() {
         deployments: [],
         deployment: null
       });
+      console.log('All deployments cleared');
     } catch (err) {
       console.error('Error clearing deployment selections:', err);
     }
   };
 
-  // NEW: Select all filtered deployments
+  // Select all filtered deployments
   const handleSelectAllDeployments = async (filteredDeployments: Deployment[]) => {
     // Only select deployments that aren't already selected
     const newDeployments = filteredDeployments.filter(fd => 
@@ -161,18 +174,19 @@ export function useEvaluationModelManagement() {
         deployments: newSelected.map(d => ({
           id: d.id,
           name: d.name,
-          model: d.model,
-          provider: d.provider,
+          model: d.model || d.name,
+          provider: d.provider || 'Unknown',
           selectedAt: new Date().toISOString()
         })),
         deployment: {
           id: newSelected[0].id,
           name: newSelected[0].name,
-          model: newSelected[0].model,
-          provider: newSelected[0].provider,
+          model: newSelected[0].model || newSelected[0].name,
+          provider: newSelected[0].provider || 'Unknown',
           selectedAt: new Date().toISOString()
         }
       });
+      console.log('All deployments selected');
     } catch (err) {
       console.error('Error selecting all deployments:', err);
       // Revert on error
@@ -180,13 +194,13 @@ export function useEvaluationModelManagement() {
     }
   };
 
-  // UPDATED: Filter deployments with enhanced search
+  // Filter deployments with enhanced search
   const getFilteredDeployments = (searchTerm: string, provider: string, status: string) => {
     return deployments.filter(deployment => {
       const matchesSearch = deployment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           deployment.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           deployment.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           deployment.region.toLowerCase().includes(searchTerm.toLowerCase());
+                           (deployment.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (deployment.provider || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           deployment.description.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesProvider = provider === 'All Providers' || deployment.provider === provider;
       
@@ -197,7 +211,7 @@ export function useEvaluationModelManagement() {
     });
   };
 
-  // NEW: Get deployment selection statistics
+  // Get deployment selection statistics
   const getSelectionStats = () => {
     const total = deployments.length;
     const selected = selectedDeployments.length;
@@ -215,22 +229,22 @@ export function useEvaluationModelManagement() {
     };
   };
 
-  // NEW: Check if a deployment is selected
+  // Check if a deployment is selected
   const isDeploymentSelected = (deploymentId: string): boolean => {
     return selectedDeployments.some(d => d.id === deploymentId);
   };
 
-  // NEW: Get providers from selected deployments
+  // Get providers from selected deployments
   const getSelectedProviders = (): string[] => {
-    return [...new Set(selectedDeployments.map(d => d.provider))];
+    return [...new Set(selectedDeployments.map(d => d.provider || 'Unknown'))];
   };
 
-  // NEW: Get unique providers from all deployments
+  // Get unique providers from all deployments
   const getAllProviders = (): string[] => {
-    return [...new Set(deployments.map(d => d.provider))];
+    return [...new Set(deployments.map(d => d.provider || 'Unknown'))];
   };
 
-  // NEW: Validate if current selection is valid for evaluation
+  // Validate if current selection is valid for evaluation
   const validateSelection = () => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -244,7 +258,7 @@ export function useEvaluationModelManagement() {
       errors.push(`${errorDeployments.length} selected deployment(s) have errors and cannot be used`);
     }
 
-    const inactiveDeployments = selectedDeployments.filter(d => d.status === 'inactive');
+    const inactiveDeployments = selectedDeployments.filter(d => d.status === 'inactive' || d.status === 'maintenance');
     if (inactiveDeployments.length > 0) {
       warnings.push(`${inactiveDeployments.length} selected deployment(s) are inactive`);
     }
@@ -256,34 +270,51 @@ export function useEvaluationModelManagement() {
     };
   };
 
+  // 🔥 NEW: Refresh deployments from API
+  const refreshDeployments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Refreshing deployments from API...');
+      
+      const data = await getEvaluationDeployments();
+      setDeployments(data);
+      
+      console.log('Successfully refreshed deployments');
+    } catch (err) {
+      console.error('Failed to refresh deployments:', err);
+      setError('Failed to refresh deployments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     // State
     deployments,
-    selectedDeployments, // CHANGED: Now returns array
+    selectedDeployments,
     loading,
     error,
 
-    // Original methods (updated for multiple selection)
+    // Actions
     handleDeploymentSelect,
-    getFilteredDeployments,
-
-    // NEW: Multiple selection methods
     handleDeploymentDeselect,
     handleClearAllDeployments,
     handleSelectAllDeployments,
-
-    // NEW: Utility methods
+    
+    // Utilities
+    getFilteredDeployments,
     isDeploymentSelected,
     getSelectionStats,
     getSelectedProviders,
-    getAllProviders: getAllProviders,
+    getAllProviders,
     validateSelection,
+    refreshDeployments, // 🔥 NEW
 
     // Computed values
-    providers: getAllProviders(), // Keep existing interface
+    providers: getAllProviders(),
     
     // Legacy compatibility (for backward compatibility)
-    selectedDeployment: selectedDeployments.length > 0 ? selectedDeployments[0] : null,
-    handleDeploymentSelect: handleDeploymentSelect // Keep original name for compatibility
+    selectedDeployment: selectedDeployments.length > 0 ? selectedDeployments[0] : null
   };
 }

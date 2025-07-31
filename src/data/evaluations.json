@@ -1,5 +1,5 @@
 {
-  "evaluations": [
+  "evaluationRuns": [
     {
       "id": "eval-1",
       "name": "Customer Support Bot Evaluation",
@@ -25,27 +25,225 @@
       "completedTasks": 32,
       "failedTasks": 1,
       "progress": 44,
-      "description": "Evaluating marketing content generation quality"
+      "description": "Evaluating content generation quality and relevance"
     },
     {
       "id": "eval-3",
-      "name": "Code Review Assistant Test",
+      "name": "Code Review Analysis",
       "deployment": "Llama Code Assistant",
       "organization": "DataSync Labs",
       "status": "failed",
       "createdAt": "2024-01-15T07:30:00Z",
+      "completedAt": "2024-01-15T07:45:00Z",
       "totalTasks": 25,
-      "completedTasks": 8,
-      "failedTasks": 17,
-      "progress": 32,
-      "description": "Testing code review and completion capabilities"
+      "completedTasks": 0,
+      "failedTasks": 25,
+      "progress": 0,
+      "description": "Code quality evaluation and suggestions",
+      "error": "API endpoint unreachable"
     }
   ],
-  "stats": {
+  "evaluationTasks": [
+    {
+      "id": "task-1",
+      "evaluationId": "eval-1",
+      "name": "Product Inquiry Response",
+      "status": "completed",
+      "progress": 100,
+      "startedAt": "2024-01-15T08:05:00Z",
+      "completedAt": "2024-01-15T08:25:00Z"
+    },
+    {
+      "id": "task-2",
+      "evaluationId": "eval-1",
+      "name": "Technical Support Query",
+      "status": "failed",
+      "progress": 0,
+      "startedAt": "2024-01-15T08:30:00Z",
+      "error": "Request timeout - unable to process query. Please check your internet connection and try restarting your device."
+    },
+    {
+      "id": "task-3",
+      "evaluationId": "eval-2",
+      "name": "Blog Post Generation",
+      "status": "running",
+      "progress": 65,
+      "startedAt": "2024-01-15T10:20:00Z"
+    },
+    {
+      "id": "task-4",
+      "evaluationId": "eval-2",
+      "name": "Social Media Content",
+      "status": "pending",
+      "progress": 0,
+      "startedAt": "2024-01-15T10:25:00Z"
+    },
+    {
+      "id": "task-5",
+      "evaluationId": "eval-3",
+      "name": "Code Review Analysis",
+      "status": "failed",
+      "progress": 0,
+      "startedAt": "2024-01-15T07:35:00Z",
+      "error": "API endpoint timeout - unable to process code review request"
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org-1",
+      "name": "Acme Corporation",
+      "description": "Leading AI solutions provider",
+      "activeDeployments": 5,
+      "totalEvaluations": 127
+    },
+    {
+      "id": "org-2",
+      "name": "TechFlow Inc",
+      "description": "Enterprise software solutions",
+      "activeDeployments": 3,
+      "totalEvaluations": 89
+    },
+    {
+      "id": "org-3",
+      "name": "DataSync Labs",
+      "description": "Data analytics and AI research",
+      "activeDeployments": 7,
+      "totalEvaluations": 203
+    }
+  ],
+  "deployments": [
+    {
+      "id": "deploy-1",
+      "name": "GPT-4 Customer Support",
+      "description": "Customer support chatbot deployment",
+      "version": "v2.1.3",
+      "endpoint": "https://api.acme.com/chat/support",
+      "status": "active",
+      "lastUpdated": "2024-01-15T10:30:00Z",
+      "organization": "org-1"
+    },
+    {
+      "id": "deploy-2",
+      "name": "Claude Content Generator",
+      "description": "Marketing content generation system",
+      "version": "v1.8.2",
+      "endpoint": "https://api.techflow.com/content",
+      "status": "active",
+      "lastUpdated": "2024-01-14T15:45:00Z",
+      "organization": "org-2"
+    },
+    {
+      "id": "deploy-3",
+      "name": "Llama Code Assistant",
+      "description": "AI-powered code completion and review",
+      "version": "v3.0.1",
+      "endpoint": "https://api.datasync.com/code",
+      "status": "maintenance",
+      "lastUpdated": "2024-01-13T09:20:00Z",
+      "organization": "org-3"
+    }
+  ],
+  "payloadTemplates": [
+    {
+      "id": "payload-1",
+      "name": "Question Answering",
+      "description": "Standard Q&A evaluation template",
+      "template": "{\"question\": \"{{question}}\", \"context\": \"{{context}}\"}",
+      "variables": [
+        {
+          "name": "question",
+          "type": "string",
+          "required": true,
+          "description": "The question to ask"
+        },
+        {
+          "name": "context",
+          "type": "string",
+          "required": false,
+          "description": "Additional context"
+        }
+      ],
+      "category": "QA"
+    },
+    {
+      "id": "payload-2",
+      "name": "Content Generation",
+      "description": "Content creation evaluation template",
+      "template": "{\"prompt\": \"{{prompt}}\", \"style\": \"{{style}}\", \"length\": {{length}}}",
+      "variables": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "description": "Content generation prompt"
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "defaultValue": "professional",
+          "description": "Writing style"
+        },
+        {
+          "name": "length",
+          "type": "number",
+          "required": false,
+          "defaultValue": 500,
+          "description": "Target length in words"
+        }
+      ],
+      "category": "Generation"
+    }
+  ],
+  "dashboardStats": {
     "totalEvaluations": 156,
     "activeEvaluations": 3,
     "completedEvaluations": 128,
     "failedEvaluations": 25,
     "averageSuccessRate": 87.2
-  }
+  },
+  "evaluationDatasets": [
+    {
+      "id": "eval_dataset_001",
+      "uid": "eval_dataset_001",
+      "name": "Customer Support Q&A",
+      "description": "Question-answer pairs for customer support bot evaluation",
+      "size": 1024000,
+      "status": "valid",
+      "columns": ["input", "expected_output", "category"],
+      "rows": 1200,
+      "uploadedAt": "2024-01-12T14:30:00Z",
+      "taskType": "Question Answering",
+      "tags": ["customer_support", "qa", "evaluation"],
+      "format": "CSV"
+    },
+    {
+      "id": "eval_dataset_002",
+      "uid": "eval_dataset_002",
+      "name": "Code Generation Test Set",
+      "description": "Programming problems with expected solutions",
+      "size": 2048000,
+      "status": "valid",
+      "columns": ["problem_description", "expected_code", "difficulty", "language"],
+      "rows": 500,
+      "uploadedAt": "2024-01-13T09:15:00Z",
+      "taskType": "Code Generation",
+      "tags": ["code", "programming", "evaluation"],
+      "format": "JSON"
+    },
+    {
+      "id": "eval_dataset_003",
+      "uid": "eval_dataset_003",
+      "name": "Sentiment Analysis Dataset",
+      "description": "Text samples with sentiment labels",
+      "size": 512000,
+      "status": "valid",
+      "columns": ["text", "sentiment", "confidence"],
+      "rows": 2000,
+      "uploadedAt": "2024-01-14T11:45:00Z",
+      "taskType": "Text Classification",
+      "tags": ["sentiment", "classification", "evaluation"],
+      "format": "CSV"
+    }
+  ]
 }

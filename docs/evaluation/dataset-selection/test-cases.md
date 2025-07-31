@@ -20,7 +20,7 @@ Wait for page to fully load
 Expected Results:
 
 ✅ Progress stepper displays at top (Step 1 active)
-✅ "Select Evaluation Dataset" header visible
+✅ "Select Evaluation Payload" header visible
 ✅ Upload section with all fields visible
 ✅ Existing datasets section loads
 ✅ Evaluation guide fixed on right side

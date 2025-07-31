@@ -20,7 +20,7 @@ export interface FileUploadConfig {
 // Updated task types and file upload configuration
 const FILE_UPLOAD_CONFIGS: Record<string, FileUploadConfig> = {
   '/evaluation/dataset-selection': {
-    title: 'Upload Evaluation Dataset',
+    title: 'Upload Evaluation Payload',
     description: 'Upload your YAML dataset for model evaluation with proper task-specific columns',
     acceptedFormats: ['YAML', 'YML'],
     maxFileSize: 10, // MB
@@ -65,8 +65,7 @@ const TASK_COLUMN_REQUIREMENTS: Record<string, {
   'Question Answering': {
     mandatory: [
       { name: 'question', description: 'The question to be answered' },
-      { name: 'expected_answer', description: 'The correct/reference answer' },
-      { name: 'generated_answer', description: 'The model-generated answer' }
+      { name: 'expected_answer', description: 'The correct/reference answer' }
     ],
     optional: [
       { name: 'context', description: 'Relevant context information' },
@@ -77,125 +76,119 @@ const TASK_COLUMN_REQUIREMENTS: Record<string, {
     example: {
       question: "What is the capital of France?",
       expected_answer: "Paris",
-      generated_answer: "The capital of France is Paris.",
-      context: "Geography knowledge base",
+      context: "Geography and world capitals",
+      reference: "World Atlas 2024",
       metadata: { difficulty: "easy", category: "geography" }
     }
   },
   'Summarization': {
     mandatory: [
       { name: 'input_text', description: 'The text to be summarized' },
-      { name: 'expected_summary', description: 'The reference summary' },
-      { name: 'generated_summary', description: 'The model-generated summary' }
+      { name: 'expected_summary', description: 'The reference/expected summary' }
     ],
     optional: [
       { name: 'reference_summary', description: 'Alternative reference summary' },
       { name: 'metadata', description: 'Additional metadata (JSON object)' },
-      { name: 'source_title', description: 'Title of source document' }
+      { name: 'source_title', description: 'Title of the source document' },
+      { name: 'length_constraint', description: 'Target summary length' }
     ],
     example: {
-      input_text: "Long article about climate change impacts on agriculture...",
-      expected_summary: "Climate change significantly affects crop yields globally.",
-      generated_summary: "Global warming impacts agricultural productivity worldwide.",
-      source_title: "Climate Change Agriculture Report 2024",
-      metadata: { length_constraint: "50 words", domain: "science" }
+      input_text: "Long article about artificial intelligence and its applications in modern society...",
+      expected_summary: "AI is transforming modern society across multiple domains.",
+      reference_summary: "Alternative summary for comparison",
+      source_title: "AI in Society Report",
+      length_constraint: "50 words",
+      metadata: { domain: "technology", complexity: "medium" }
     }
   },
   'Conversational QA': {
     mandatory: [
       { name: 'conversation_history', description: 'Previous conversation turns' },
-      { name: 'question', description: 'Current user question' },
-      { name: 'expected_answer', description: 'Expected response' },
-      { name: 'generated_answer', description: 'Model-generated response' }
+      { name: 'question', description: 'Current question in the conversation' },
+      { name: 'expected_answer', description: 'Expected response' }
     ],
     optional: [
-      { name: 'context', description: 'Additional context' },
-      { name: 'turn_id', description: 'Turn number in conversation' },
+      { name: 'context', description: 'Additional context information' },
+      { name: 'turn_id', description: 'Turn identifier in conversation' },
       { name: 'metadata', description: 'Additional metadata (JSON object)' }
     ],
     example: {
-      conversation_history: "User: Hello\nBot: Hi! How can I help you today?",
+      conversation_history: "User: Hello\nAssistant: Hi! How can I help you today?",
       question: "I need help with my account",
-      expected_answer: "I can help you with account issues. What specifically do you need?",
-      generated_answer: "Sure, I can help with your account. What's the problem?",
-      turn_id: 2,
+      expected_answer: "I'd be happy to help with your account. What specific issue are you facing?",
+      context: "Customer support conversation",
+      turn_id: "turn_2",
       metadata: { session_id: "sess_123", user_type: "premium" }
     }
   },
   'Retrieval (RAG)': {
     mandatory: [
-      { name: 'query', description: 'Search query' },
-      { name: 'retrieved_documents', description: 'Retrieved document IDs/names' },
-      { name: 'expected_answer', description: 'Expected answer from documents' },
-      { name: 'generated_answer', description: 'Model-generated answer' }
+      { name: 'query', description: 'Search query or question' },
+      { name: 'retrieved_documents', description: 'Documents retrieved for the query' },
+      { name: 'expected_answer', description: 'Expected answer based on documents' }
     ],
     optional: [
       { name: 'ground_truth_docs', description: 'Ground truth relevant documents' },
-      { name: 'reference', description: 'Reference sources' },
+      { name: 'reference', description: 'Reference source information' },
       { name: 'metadata', description: 'Additional metadata (JSON object)' }
     ],
     example: {
-      query: "What are the benefits of renewable energy?",
-      retrieved_documents: ["doc_solar_2024.pdf", "doc_wind_energy.pdf"],
-      expected_answer: "Renewable energy reduces carbon emissions and provides sustainable power.",
-      generated_answer: "Renewable sources like solar and wind help reduce environmental impact.",
-      ground_truth_docs: ["doc_solar_2024.pdf"],
-      metadata: { retrieval_score: 0.89, num_docs: 2 }
+      query: "How does photosynthesis work?",
+      retrieved_documents: "Document 1: Plants convert sunlight... Document 2: Chlorophyll process...",
+      expected_answer: "Photosynthesis is the process by which plants convert sunlight into energy.",
+      ground_truth_docs: "doc_456, doc_789",
+      reference: "Biology textbook Chapter 12",
+      metadata: { search_engine: "vector_db", confidence: 0.95 }
     }
   },
   'Classification': {
     mandatory: [
-      { name: 'input_text', description: 'Text to classify' },
-      { name: 'expected_label', description: 'True classification label' },
-      { name: 'predicted_label', description: 'Model-predicted label' }
+      { name: 'input_text', description: 'Text to be classified' },
+      { name: 'expected_label', description: 'Correct classification label' }
     ],
     optional: [
-      { name: 'label_confidence', description: 'Prediction confidence score' },
+      { name: 'label_confidence', description: 'Confidence score for label' },
       { name: 'metadata', description: 'Additional metadata (JSON object)' },
-      { name: 'reasoning', description: 'Model reasoning/explanation' }
+      { name: 'reasoning', description: 'Explanation for the classification' }
     ],
     example: {
-      input_text: "This product exceeded my expectations! Highly recommended.",
+      input_text: "I absolutely love this product! It exceeded my expectations.",
       expected_label: "positive",
-      predicted_label: "positive",
-      label_confidence: 0.95,
-      reasoning: "Positive keywords: exceeded, highly recommended",
-      metadata: { model_version: "v2.1", category: "sentiment" }
+      label_confidence: 0.92,
+      reasoning: "Contains positive sentiment words like 'love' and 'exceeded expectations'",
+      metadata: { domain: "product_reviews", language: "en" }
     }
   },
   'Structured Output Generation': {
     mandatory: [
-      { name: 'input_instruction', description: 'Instruction for data extraction' },
-      { name: 'expected_output', description: 'Expected structured output' },
-      { name: 'generated_output', description: 'Model-generated structured output' }
+      { name: 'input_instruction', description: 'Instruction for structured output generation' },
+      { name: 'expected_output', description: 'Expected structured output' }
     ],
     optional: [
-      { name: 'format_schema', description: 'JSON schema for output format' },
-      { name: 'reference', description: 'Reference guidelines' },
+      { name: 'format_schema', description: 'Schema definition for output format' },
+      { name: 'reference', description: 'Reference example or documentation' },
       { name: 'metadata', description: 'Additional metadata (JSON object)' }
     ],
     example: {
-      input_instruction: "Extract person and company information from: John Doe works at ABC Corp",
-      expected_output: { name: "John Doe", company: "ABC Corp", role: null },
-      generated_output: { name: "John Doe", company: "ABC Corp" },
-      format_schema: { type: "object", properties: { name: "string", company: "string" } },
-      metadata: { extraction_confidence: 0.92 }
+      input_instruction: "Extract person information from: John Doe works at ABC Corp as Software Engineer",
+      expected_output: '{"name": "John Doe", "company": "ABC Corp", "position": "Software Engineer"}',
+      format_schema: "person_info_schema",
+      reference: "Entity extraction guidelines v2.1",
+      metadata: { extraction_type: "person_info", difficulty: "medium" }
     }
   },
   'Open-ended Generation': {
     mandatory: [
-      { name: 'prompt', description: 'Generation prompt/instruction' },
-      { name: 'generated_output', description: 'Model-generated content' }
+      { name: 'prompt', description: 'Generation prompt or instruction' }
     ],
     optional: [
-      { name: 'reference_output', description: 'Reference/example output' },
-      { name: 'feedback', description: 'Human feedback on quality' },
-      { name: 'toxicity_flag', description: 'Toxicity detection flag' },
+      { name: 'reference_output', description: 'Reference or example output' },
+      { name: 'feedback', description: 'Human feedback or evaluation notes' },
+      { name: 'toxicity_flag', description: 'Flag for toxic content detection' },
       { name: 'metadata', description: 'Additional metadata (JSON object)' }
     ],
     example: {
       prompt: "Write a short story about a robot learning to paint",
-      generated_output: "In a small workshop, R2D7 discovered brushes and colors for the first time...",
       reference_output: "Example creative story about artistic robots",
       feedback: "Creative and engaging narrative with good character development",
       toxicity_flag: false,
@@ -270,13 +263,13 @@ export interface DatasetTipsConfig {
 
 const DATASET_TIPS_CONFIGS: Record<string, DatasetTipsConfig> = {
   '/evaluation/dataset-selection': {
-    title: 'Evaluation Dataset Guide',
+    title: 'Evaluation Payload Guide',
     sections: [
       {
         icon: 'Target',
         iconColor: 'text-blue-500',
         title: 'YAML Format Required',
-        description: 'Upload datasets in YAML format with proper task-specific column structure'
+        description: 'Upload payloads in YAML format with proper task-specific column structure'
       },
       {
         icon: 'BarChart',
@@ -302,7 +295,7 @@ const DATASET_TIPS_CONFIGS: Record<string, DatasetTipsConfig> = {
     ],
     bestPractices: {
       title: 'Best Practices',
-      description: 'Ensure your dataset includes both expected and generated outputs for accurate evaluation metrics. Use metadata fields for additional context and evaluation parameters.',
+      description: 'Ensure your payload includes both expected and generated outputs for accurate evaluation metrics. Use metadata fields for additional context and evaluation parameters.',
       bgColor: 'bg-amber-50 dark:bg-amber-900/20',
       borderColor: 'border-amber-200 dark:border-amber-800',
       titleColor: 'text-amber-800 dark:text-amber-200',
