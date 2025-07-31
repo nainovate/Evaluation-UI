@@ -1,77 +1,101 @@
-
-'use client'
+// src/hooks/useEvaluationData.ts - Updated to use API-based data
 
 import { useState, useEffect, useCallback } from 'react';
-import { EvaluationData } from '../types/evaluation';
-// 🔥 ADD THIS IMPORT
-import { getEvaluationStages } from '../utils/flowGenerator';
+import { dataService } from '@/services/data.service';
+import { 
+  getEvaluationDatasets,
+  getEvaluationDeployments,
+  getEvaluationOrganizations,
+  getEvaluationRuns,
+  getEvaluationTasks,
+  getDashboardStats,
+  generateMockEvaluation
+} from '@/utils/evaluationUtils';
+
+// Types
+interface EvaluationData {
+  id: string;
+  name: string;
+  deployment: string;
+  organization: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  currentStage: string;
+  stages: Array<{
+    name: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    description: string;
+  }>;
+  metrics: {
+    answerRelevance: number;
+    coherence: number;
+    helpfulness: number;
+    accuracy: number;
+    currentTask: number;
+    totalTasks: number;
+  };
+  systemStatus: {
+    cpuUsage: number;
+    gpuUsage: number;
+    ramUsage: string;
+    vramUsage: string;
+    temperature: string;
+    diskUsage: string;
+  };
+  tags: string[];
+}
 
 interface UseEvaluationDataReturn {
   evaluation: EvaluationData | null;
+  evaluationRuns: any[];
+  evaluationTasks: any[];
+  organizations: any[];
+  deployments: any[];
+  datasets: any[];
+  dashboardStats: any;
   loading: boolean;
   error: string | null;
-  isLive: boolean;
-  toggleLive: () => void;
-  updateEvaluation: (data: Partial<EvaluationData>) => void;
-  refetch: () => void;
+  refreshData: () => Promise<void>;
+  fetchEvaluationData: (evaluationName: string) => Promise<void>;
 }
 
-export const useEvaluationData = (
-  evaluationName: string,
-  initialData?: EvaluationData
-): UseEvaluationDataReturn => {
-  const [evaluation, setEvaluation] = useState<EvaluationData | null>(initialData || null);
-  const [loading, setLoading] = useState(!initialData);
+export function useEvaluationData(): UseEvaluationDataReturn {
+  const [evaluation, setEvaluation] = useState<EvaluationData | null>(null);
+  const [evaluationRuns, setEvaluationRuns] = useState<any[]>([]);
+  const [evaluationTasks, setEvaluationTasks] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [deployments, setDeployments] = useState<any[]>([]);
+  const [datasets, setDatasets] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<any>({});
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLive, setIsLive] = useState(true);
 
-  // 🔥 ADD THESE HELPER FUNCTIONS
-  const generateStagesFromConfig = useCallback((currentStage: string = 'Evaluation'): Array<{name: string, status: string, description: string}> => {
-    const configStages = getEvaluationStages(); // Reads from config!
+  // Generate stages from config (keep this helper function)
+  const generateStagesFromConfig = useCallback((currentStage: string) => {
+    const allStages = [
+      { name: 'Dataset Loading', status: 'completed', description: 'Loading and validating evaluation data' },
+      { name: 'Model Setup', status: 'completed', description: 'Initializing model and configuration' },
+      { name: 'Evaluation', status: 'pending', description: 'Running evaluation tasks and collecting metrics' },
+      { name: 'Analysis', status: 'pending', description: 'Analyzing results and generating reports' }
+    ];
+
+    const currentIndex = allStages.findIndex(stage => stage.name === currentStage);
     
-    return configStages.map((stageName, index) => ({
-      name: stageName,
-      status: getStageStatus(stageName, currentStage, index),
-      description: getStageDescription(stageName)
+    return allStages.map((stage, index) => ({
+      ...stage,
+      status: index < currentIndex ? 'completed' : 
+              index === currentIndex ? 'running' : 'pending'
     }));
   }, []);
 
-  const getStageStatus = (stageName: string, currentStage: string, index: number): string => {
-    const configStages = getEvaluationStages();
-    const currentIndex = configStages.indexOf(currentStage);
-    const stageIndex = configStages.indexOf(stageName);
-
-    if (stageIndex < currentIndex) return 'completed';
-    if (stageIndex === currentIndex) return 'running';
-    return 'pending';
-  };
-
-  const getStageDescription = (stageName: string): string => {
-    const descriptions: Record<string, string> = {
-      'Dataset Loading': 'Loading and validating evaluation data',
-      'Model Setup': 'Initializing model and configuration',
-      'Evaluation': 'Running evaluation tasks and collecting metrics',
-      'Analysis': 'Analyzing results and generating reports',
-      
-      // Support for custom stage names
-      'Initializing': 'Setting up the evaluation environment',
-      'Processing': 'Processing evaluation data and running tests',
-      'Finalizing': 'Completing evaluation and preparing results',
-      'Preparing': 'Preparing models and configurations',
-      'Executing': 'Executing evaluation tasks',
-      'Completing': 'Finalizing results and analysis'
-    };
-    
-    return descriptions[stageName] || `${stageName} phase of the evaluation process`;
-  };
-
-  // Mock data generator for demo purposes
-  const generateMockEvaluation = useCallback((name: string): EvaluationData => {
+  // Generate mock evaluation data (for individual evaluation detail view)
+  const generateMockEvaluationData = useCallback((evaluationName: string): EvaluationData => {
     return {
-      id: 'eval_cs_001',
-      name: decodeURIComponent(name),
-      description: 'Comprehensive evaluation of AI model performance on customer support tasks with multi-dimensional scoring',
-      status: Math.random() > 0.3 ? 'running' : 'completed',
+      id: `eval-${Date.now()}`,
+      name: evaluationName,
+      deployment: 'GPT-4 Customer Support',
+      organization: 'Acme Corporation',
+      status: Math.random() > 0.5 ? 'running' : 'completed',
       model: 'Claude-3 Sonnet',
       modelVersion: 'claude-3-sonnet-20240229',
       dataset: 'Customer Support Conversations v2',
@@ -81,17 +105,7 @@ export const useEvaluationData = (
       progress: Math.floor(Math.random() * 100),
       currentStage: 'Evaluation',
       
-      // 🔥 REPLACE THESE HARDCODED STAGES (lines 43-48):
-      // OLD (REMOVE):
-      // stages: [
-      //   { name: 'Dataset Loading', status: 'completed', description: 'Loading and validating evaluation data' },
-      //   { name: 'Model Setup', status: 'completed', description: 'Initializing model and configuration' },
-      //   { name: 'Evaluation', status: 'running', description: 'Running evaluation tasks and collecting metrics' },
-      //   { name: 'Analysis', status: 'pending', description: 'Analyzing results and generating reports' }
-      // ],
-      
-      // NEW (USE CONFIG):
-      stages: generateStagesFromConfig('Evaluation'), // 🔥 NOW READS FROM CONFIG!
+      stages: generateStagesFromConfig('Evaluation'),
       
       metrics: {
         answerRelevance: 0.924,
@@ -111,96 +125,93 @@ export const useEvaluationData = (
       },
       tags: ['customer-service', 'quality-assessment', 'production']
     };
-  }, [generateStagesFromConfig]); // 🔥 ADD DEPENDENCY
+  }, [generateStagesFromConfig]);
 
-  // Rest of your code remains the same...
-  
-  // Fetch evaluation data
-  const fetchEvaluationData = useCallback(async () => {
+  // Fetch all evaluation data from API
+  const refreshData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/evaluations/${evaluationName}`);
-      // if (!response.ok) throw new Error('Failed to fetch evaluation');
-      // const data = await response.json();
+      console.log('Refreshing all evaluation data from APIs...');
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Fetch all data in parallel
+      const [
+        runsData,
+        tasksData,
+        orgsData,
+        deploymentsData,
+        datasetsData,
+        statsData
+      ] = await Promise.all([
+        getEvaluationRuns(),
+        getEvaluationTasks(),
+        getEvaluationOrganizations(),
+        getEvaluationDeployments(),
+        getEvaluationDatasets(),
+        getDashboardStats()
+      ]);
+
+      setEvaluationRuns(runsData);
+      setEvaluationTasks(tasksData);
+      setOrganizations(orgsData);
+      setDeployments(deploymentsData);
+      setDatasets(datasetsData);
+      setDashboardStats(statsData);
       
-      const mockData = generateMockEvaluation(evaluationName);
-      setEvaluation(mockData);
+      console.log('Successfully loaded all evaluation data');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load evaluation');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch evaluation data';
+      setError(errorMessage);
+      console.error('Error refreshing evaluation data:', err);
     } finally {
       setLoading(false);
     }
-  }, [evaluationName, generateMockEvaluation]);
+  }, []);
 
-  // Initial data fetch
-  useEffect(() => {
-    if (!initialData) {
-      fetchEvaluationData();
+  // Fetch specific evaluation data
+  const fetchEvaluationData = useCallback(async (evaluationName?: string) => {
+    const nameToUse = evaluationName || 'Default Evaluation';
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log(`Fetching evaluation data for: ${nameToUse}`);
+      
+      // For now, generate mock data for individual evaluation view
+      // In the future, this could fetch from a specific API endpoint
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const mockData = generateMockEvaluationData(nameToUse);
+      setEvaluation(mockData);
+      
+      console.log('Successfully loaded evaluation data');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch evaluation';
+      setError(errorMessage);
+      console.error('Error fetching evaluation data:', err);
+    } finally {
+      setLoading(false);
     }
-  }, [fetchEvaluationData, initialData]);
+  }, [generateMockEvaluationData]);
 
-  // Real-time updates for running evaluations
+  // Load initial data when hook mounts
   useEffect(() => {
-    if (!isLive || !evaluation || evaluation.status !== 'running') return;
-
-    const interval = setInterval(() => {
-      setEvaluation(prev => {
-        if (!prev) return prev;
-        
-        const newProgress = Math.min(prev.progress + Math.random() * 2, 100);
-        const newCurrentTask = Math.min(
-          prev.metrics.currentTask + Math.floor(Math.random() * 3),
-          prev.metrics.totalTasks
-        );
-
-        return {
-          ...prev,
-          progress: newProgress,
-          metrics: {
-            ...prev.metrics,
-            currentTask: newCurrentTask,
-            answerRelevance: Math.max(0.8, Math.min(1.0, prev.metrics.answerRelevance + (Math.random() - 0.5) * 0.02)),
-            coherence: Math.max(0.8, Math.min(1.0, prev.metrics.coherence + (Math.random() - 0.5) * 0.02)),
-            helpfulness: Math.max(0.8, Math.min(1.0, prev.metrics.helpfulness + (Math.random() - 0.5) * 0.02)),
-            accuracy: Math.max(0.8, Math.min(1.0, prev.metrics.accuracy + (Math.random() - 0.5) * 0.02))
-          },
-          systemStatus: {
-            ...prev.systemStatus,
-            cpuUsage: Math.max(15, Math.min(40, prev.systemStatus.cpuUsage + (Math.random() - 0.5) * 5)),
-            gpuUsage: Math.max(60, Math.min(90, prev.systemStatus.gpuUsage + (Math.random() - 0.5) * 8))
-          }
-        };
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [isLive, evaluation?.status]);
-
-  const toggleLive = useCallback(() => {
-    setIsLive(prev => !prev);
-  }, []);
-
-  const updateEvaluation = useCallback((data: Partial<EvaluationData>) => {
-    setEvaluation(prev => prev ? { ...prev, ...data } : null);
-  }, []);
-
-  const refetch = useCallback(() => {
-    fetchEvaluationData();
-  }, [fetchEvaluationData]);
+    refreshData();
+  }, [refreshData]);
 
   return {
     evaluation,
+    evaluationRuns,
+    evaluationTasks,
+    organizations,
+    deployments,
+    datasets,
+    dashboardStats,
     loading,
     error,
-    isLive,
-    toggleLive,
-    updateEvaluation,
-    refetch
+    refreshData,
+    fetchEvaluationData
   };
-};
+}

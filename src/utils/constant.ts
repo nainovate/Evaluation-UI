@@ -4,7 +4,7 @@ import { TipsConfig } from '@/components/common/DatasetTips';
 
 // 🔹 EVALUATION DATASET CONFIGURATION
 export const getEvaluationDatasetConfig = (): TipsConfig => ({
-  title: "Evaluation Dataset Guide",
+  title: "Evaluation Payload Guide",
   sections: [
     {
       icon: Target,
@@ -51,7 +51,7 @@ export const getFinetuningDatasetConfig = (): TipsConfig => ({
       icon: Settings,
       iconColor: "text-red-500",
       title: "Data Format",
-      description: "Ensure your dataset follows the required format with proper input-output pairs and consistent structure."
+      description: "Ensure your payload follows the required format with proper input-output pairs and consistent structure."
     },
     {
       icon: BarChart,

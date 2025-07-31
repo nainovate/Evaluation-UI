@@ -1,6 +1,8 @@
-// src/utils/evaluationUtils.ts - Simplified with direct mock data (no backend)
+// src/utils/evaluationUtils.ts - Updated to use API instead of hardcoded data
 
-// Types for evaluation metrics
+import { dataService } from '@/services/data.service';
+
+// Types for evaluation metrics (keep existing types)
 export interface SubMetric {
   id: string;
   name: string;
@@ -28,16 +30,17 @@ export interface MetricsConfiguration {
 export interface Deployment {
   id: string;
   name: string;
-  model: string;
-  status: 'active' | 'inactive' | 'error';
+  model?: string;
+  status: 'active' | 'inactive' | 'error' | 'maintenance';
   endpoint: string;
-  provider: string;
-  region: string;
+  provider?: string;
+  region?: string;
   lastUpdated: string;
-  responseTime: number;
-  uptime: number;
+  responseTime?: number;
+  uptime?: number;
   description: string;
   version: string;
+  organization?: string;
 }
 
 export interface EvaluationDataset {
@@ -109,239 +112,136 @@ export interface EvaluationMetadata {
   configuration?: any;
 }
 
-// Define mandatory and optional columns for each task type - UPDATED
-const TASK_TYPE_COLUMNS = {
-  'Question Answering': {
-    mandatory: ['question', 'expected_answer', 'generated_answer'],
-    optional: ['context', 'reference', 'ground_truth', 'metadata']
-  },
-  'Summarization': {
-    mandatory: ['input_text', 'expected_summary', 'generated_summary'],
-    optional: ['reference_summary', 'metadata', 'source_title']
-  },
-  'Conversational QA': {
-    mandatory: ['conversation_history', 'question', 'expected_answer', 'generated_answer'],
-    optional: ['context', 'turn_id', 'metadata']
-  },
-  'Retrieval (RAG)': {
-    mandatory: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer'],
-    optional: ['ground_truth_docs', 'reference', 'metadata']
-  },
-  'Classification': {
-    mandatory: ['input_text', 'expected_label', 'predicted_label'],
-    optional: ['label_confidence', 'metadata', 'reasoning']
-  },
-  'Structured Output Generation': {
-    mandatory: ['input_instruction', 'expected_output', 'generated_output'],
-    optional: ['format_schema', 'reference', 'metadata']
-  },
-  'Open-ended Generation': {
-    mandatory: ['prompt', 'generated_output'],
-    optional: ['reference_output', 'feedback', 'toxicity_flag', 'metadata']
-  },
-  // Keep backward compatibility with old names
-  'Structured Output': {
-    mandatory: ['input_text', 'expected_json', 'schema_type'],
-    optional: ['difficulty']
-  },
-  'Retrieval': {
-    mandatory: ['query', 'relevant_documents', 'irrelevant_documents'],
-    optional: ['relevance_scores']
-  }
-};
+// ========== API-BASED FUNCTIONS (Replace hardcoded data) ==========
 
-// MOCK DEPLOYMENTS DATA - Direct mock data for no backend
-const mockDeployments: Deployment[] = [
-  {
-    id: 'deploy_001',
-    name: 'GPT-4 Production',
-    model: 'gpt-4-turbo',
-    status: 'active',
-    endpoint: 'https://api.openai.com/v1/chat/completions',
-    provider: 'OpenAI',
-    region: 'us-east-1',
-    lastUpdated: '2024-01-20T10:30:00Z',
-    responseTime: 1200,
-    uptime: 99.9,
-    description: 'Production deployment of GPT-4 Turbo for general purpose evaluation',
-    version: '2024-01-25'
-  },
-  {
-    id: 'deploy_002',
-    name: 'Claude-3 Sonnet',
-    model: 'claude-3-sonnet',
-    status: 'active',
-    endpoint: 'https://api.anthropic.com/v1/messages',
-    provider: 'Anthropic',
-    region: 'us-west-2',
-    lastUpdated: '2024-01-19T15:45:00Z',
-    responseTime: 950,
-    uptime: 99.8,
-    description: 'Claude-3 Sonnet deployment for balanced performance and cost',
-    version: '2024-01-15'
-  },
-  {
-    id: 'deploy_003',
-    name: 'Gemini Pro',
-    model: 'gemini-pro',
-    status: 'active',
-    endpoint: 'https://generativelanguage.googleapis.com/v1/models/gemini-pro',
-    provider: 'Google',
-    region: 'us-central1',
-    lastUpdated: '2024-01-18T09:20:00Z',
-    responseTime: 800,
-    uptime: 99.7,
-    description: 'Google Gemini Pro for multimodal evaluation tasks',
-    version: '2024-01-10'
-  },
-  {
-    id: 'deploy_004',
-    name: 'Llama-2 70B',
-    model: 'llama-2-70b-chat',
-    status: 'inactive',
-    endpoint: 'https://api.together.xyz/inference',
-    provider: 'Together AI',
-    region: 'us-west-1',
-    lastUpdated: '2024-01-15T14:30:00Z',
-    responseTime: 1500,
-    uptime: 95.2,
-    description: 'Llama-2 70B Chat model for open-source evaluation',
-    version: '2023-12-01'
-  },
-  {
-    id: 'deploy_005',
-    name: 'GPT-3.5 Turbo',
-    model: 'gpt-3.5-turbo',
-    status: 'active',
-    endpoint: 'https://api.openai.com/v1/chat/completions',
-    provider: 'OpenAI',
-    region: 'us-east-1',
-    lastUpdated: '2024-01-21T11:15:00Z',
-    responseTime: 600,
-    uptime: 99.9,
-    description: 'Cost-effective GPT-3.5 Turbo for high-volume evaluations',
-    version: '2024-01-20'
-  },
-  {
-    id: 'deploy_006',
-    name: 'Claude-3 Haiku',
-    model: 'claude-3-haiku',
-    status: 'error',
-    endpoint: 'https://api.anthropic.com/v1/messages',
-    provider: 'Anthropic',
-    region: 'eu-west-1',
-    lastUpdated: '2024-01-16T08:45:00Z',
-    responseTime: 400,
-    uptime: 87.3,
-    description: 'Fast and lightweight Claude-3 Haiku - currently experiencing issues',
-    version: '2024-01-05'
+// Evaluation dataset management functions - NOW USES API
+export async function getEvaluationDatasets(): Promise<EvaluationDataset[]> {
+  try {
+    console.log('Fetching evaluation datasets from API...');
+    const response = await dataService.getEvaluationDatasets();
+    
+    if (response.error) {
+      console.error('Error fetching evaluation datasets:', response.error);
+      return [];
+    }
+    
+    return response.data?.datasets || [];
+  } catch (error) {
+    console.error('Failed to fetch evaluation datasets:', error);
+    return [];
   }
-];
+}
 
-// MOCK EVALUATION DATASETS - Direct mock data for no backend
-const mockEvaluationDatasets: EvaluationDataset[] = [
-  {
-    id: 'eval_dataset_001',
-    uid: 'eval_dataset_001',
-    name: 'Customer Support QA',
-    description: 'Question answering dataset for customer support evaluation with generated responses',
-    size: 2048000,
-    status: 'valid',
-    columns: ['question', 'expected_answer', 'generated_answer', 'context', 'metadata'],
-    rows: 1000,
-    uploadedAt: '2024-01-10T14:30:00Z',
-    taskType: 'Question Answering',
-    tags: ['customer-support', 'qa', 'evaluation'],
-    format: 'YAML'
-  },
-  {
-    id: 'eval_dataset_002',
-    uid: 'eval_dataset_002',
-    name: 'News Article Summarization',
-    description: 'Summarization evaluation with expected and generated summaries',
-    size: 3584000,
-    status: 'valid',
-    columns: ['input_text', 'expected_summary', 'generated_summary', 'source_title', 'metadata'],
-    rows: 500,
-    uploadedAt: '2024-01-12T09:15:00Z',
-    taskType: 'Summarization',
-    tags: ['summarization', 'news', 'evaluation'],
-    format: 'YAML'
-  },
-  {
-    id: 'eval_dataset_003',
-    uid: 'eval_dataset_003',
-    name: 'Sentiment Classification',
-    description: 'Text classification evaluation with predictions and confidence scores',
-    size: 1536000,
-    status: 'valid',
-    columns: ['input_text', 'expected_label', 'predicted_label', 'label_confidence', 'reasoning'],
-    rows: 2000,
-    uploadedAt: '2024-01-13T16:45:00Z',
-    taskType: 'Classification',
-    tags: ['classification', 'sentiment', 'evaluation'],
-    format: 'YAML'
-  },
-  {
-    id: 'eval_dataset_004',
-    uid: 'eval_dataset_004',
-    name: 'JSON Entity Extraction',
-    description: 'Structured output generation evaluation with format validation',
-    size: 2560000,
-    status: 'valid',
-    columns: ['input_instruction', 'expected_output', 'generated_output', 'format_schema', 'metadata'],
-    rows: 750,
-    uploadedAt: '2024-01-14T11:20:00Z',
-    taskType: 'Structured Output Generation',
-    tags: ['structured-output', 'json', 'evaluation'],
-    format: 'YAML'
-  },
-  {
-    id: 'eval_dataset_005',
-    uid: 'eval_dataset_005',
-    name: 'Multi-turn Conversation',
-    description: 'Conversational QA with context awareness and multi-turn dialogue evaluation',
-    size: 1536000,
-    status: 'valid',
-    columns: ['conversation_history', 'question', 'expected_answer', 'generated_answer', 'turn_id'],
-    rows: 800,
-    uploadedAt: '2024-01-15T13:10:00Z',
-    taskType: 'Conversational QA',
-    tags: ['conversational', 'multi-turn', 'evaluation'],
-    format: 'YAML'
-  },
-  {
-    id: 'eval_dataset_006',
-    uid: 'eval_dataset_006',
-    name: 'RAG Document Retrieval',
-    description: 'Retrieval-Augmented Generation evaluation with document relevance',
-    size: 2560000,
-    status: 'valid',
-    columns: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer', 'ground_truth_docs'],
-    rows: 300,
-    uploadedAt: '2024-01-16T09:30:00Z',
-    taskType: 'Retrieval (RAG)',
-    tags: ['rag', 'retrieval', 'evaluation'],
-    format: 'YAML'
-  },
-  {
-    id: 'eval_dataset_007',
-    uid: 'eval_dataset_007',
-    name: 'Creative Writing Evaluation',
-    description: 'Open-ended generation evaluation with creativity and safety assessments',
-    size: 1920000,
-    status: 'valid',
-    columns: ['prompt', 'generated_output', 'reference_output', 'feedback', 'toxicity_flag'],
-    rows: 400,
-    uploadedAt: '2024-01-17T15:20:00Z',
-    taskType: 'Open-ended Generation',
-    tags: ['generation', 'creative', 'evaluation'],
-    format: 'YAML'
+// Deployment management functions - NOW USES API  
+export async function getEvaluationDeployments(): Promise<Deployment[]> {
+  try {
+    console.log('Fetching evaluation deployments from API...');
+    const response = await dataService.getEvaluationDeployments();
+    
+    if (response.error) {
+      console.error('Error fetching evaluation deployments:', response.error);
+      return [];
+    }
+    
+    return response.data?.deployments || [];
+  } catch (error) {
+    console.error('Failed to fetch evaluation deployments:', error);
+    return [];
   }
-];
+}
 
-// Mock evaluation metadata
-let mockMetadata: EvaluationMetadata = {
+// Organization management functions - NOW USES API
+export async function getEvaluationOrganizations() {
+  try {
+    console.log('Fetching evaluation organizations from API...');
+    const response = await dataService.getEvaluationOrganizations();
+    
+    if (response.error) {
+      console.error('Error fetching evaluation organizations:', response.error);
+      return [];
+    }
+    
+    return response.data?.organizations || [];
+  } catch (error) {
+    console.error('Failed to fetch evaluation organizations:', error);
+    return [];
+  }
+}
+
+// Evaluation runs management - NOW USES API
+export async function getEvaluationRuns() {
+  try {
+    console.log('Fetching evaluation runs from API...');
+    const response = await dataService.getEvaluations();
+    
+    if (response.error) {
+      console.error('Error fetching evaluation runs:', response.error);
+      return [];
+    }
+    
+    return response.data?.evaluationRuns || [];
+  } catch (error) {
+    console.error('Failed to fetch evaluation runs:', error);
+    return [];
+  }
+}
+
+// Get evaluation tasks - NOW USES API
+export async function getEvaluationTasks(evaluationId?: string) {
+  try {
+    console.log('Fetching evaluation tasks from API...');
+    const response = await dataService.getEvaluationTasks(evaluationId);
+    
+    if (response.error) {
+      console.error('Error fetching evaluation tasks:', response.error);
+      return [];
+    }
+    
+    return response.data?.tasks || [];
+  } catch (error) {
+    console.error('Failed to fetch evaluation tasks:', error);
+    return [];
+  }
+}
+
+// Dashboard stats - NOW USES API
+export async function getDashboardStats() {
+  try {
+    console.log('Fetching dashboard stats from API...');
+    const response = await dataService.getEvaluations();
+    
+    if (response.error) {
+      console.error('Error fetching dashboard stats:', response.error);
+      return {
+        totalEvaluations: 0,
+        activeEvaluations: 0,
+        completedEvaluations: 0,
+        failedEvaluations: 0,
+        averageSuccessRate: 0
+      };
+    }
+    
+    return response.data?.dashboardStats || {
+      totalEvaluations: 0,
+      activeEvaluations: 0,
+      completedEvaluations: 0,
+      failedEvaluations: 0,
+      averageSuccessRate: 0
+    };
+  } catch (error) {
+    console.error('Failed to fetch dashboard stats:', error);
+    return {
+      totalEvaluations: 0,
+      activeEvaluations: 0,
+      completedEvaluations: 0,
+      failedEvaluations: 0,
+      averageSuccessRate: 0
+    };
+  }
+}
+
+// Evaluation metadata management - LOCAL STATE (No API needed)
+let localMetadata: EvaluationMetadata = {
   evaluationSession: {
     id: null,
     createdAt: null,
@@ -386,132 +286,14 @@ let mockMetadata: EvaluationMetadata = {
   }
 };
 
-// Validate evaluation dataset columns based on task type - UPDATED
-export function validateEvaluationColumns(columns: string[], taskType?: string): string[] {
-  const errors: string[] = [];
-  
-  if (!taskType) {
-    // General validation - check for basic input/output pattern
-    const hasInputColumn = columns.some(col => 
-      col.toLowerCase().includes('input') || 
-      col.toLowerCase().includes('question') ||
-      col.toLowerCase().includes('text') ||
-      col.toLowerCase().includes('prompt') ||
-      col.toLowerCase().includes('query') ||
-      col.toLowerCase().includes('conversation') ||
-      col.toLowerCase().includes('instruction')
-    );
-    
-    const hasExpectedColumn = columns.some(col => 
-      col.toLowerCase().includes('expected') ||
-      col.toLowerCase().includes('reference') ||
-      col.toLowerCase().includes('target') ||
-      col.toLowerCase().includes('ground_truth')
-    );
-
-    const hasGeneratedColumn = columns.some(col => 
-      col.toLowerCase().includes('generated') ||
-      col.toLowerCase().includes('predicted') ||
-      col.toLowerCase().includes('output') ||
-      col.toLowerCase().includes('answer') ||
-      col.toLowerCase().includes('label') ||
-      col.toLowerCase().includes('json') ||
-      col.toLowerCase().includes('documents')
-    );
-    
-    if (!hasInputColumn) {
-      errors.push('Missing input column (should contain text/questions/prompts to evaluate)');
-    }
-    
-    if (!hasExpectedColumn) {
-      errors.push('Missing expected output column (should contain reference answers/labels)');
-    }
-
-    if (!hasGeneratedColumn) {
-      errors.push('Missing generated output column (should contain model predictions/responses)');
-    }
-  } else {
-    // Task-specific validation
-    const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
-    if (taskConfig) {
-      const missingMandatory = taskConfig.mandatory.filter(col => 
-        !columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
-      );
-      
-      if (missingMandatory.length > 0) {
-        errors.push(`Missing mandatory columns for ${taskType}: ${missingMandatory.join(', ')}`);
-      }
-    }
-  }
-  
-  return errors;
-}
-
-// NEW: Get column requirements for a specific task type
-export function getTaskTypeColumns(taskType: string) {
-  return TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS] || null;
-}
-
-// NEW: Check if a dataset has the required columns for a task type
-export function hasRequiredColumns(columns: string[], taskType: string): boolean {
-  const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
-  if (!taskConfig) return false;
-  
-  const missingMandatory = taskConfig.mandatory.filter(col => 
-    !columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
-  );
-  
-  return missingMandatory.length === 0;
-}
-
-// NEW: Get missing mandatory columns for a task type
-export function getMissingColumns(columns: string[], taskType: string): string[] {
-  const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
-  if (!taskConfig) return [];
-  
-  return taskConfig.mandatory.filter(col => 
-    !columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
-  );
-}
-
-// NEW: Get present optional columns for a task type
-export function getPresentOptionalColumns(columns: string[], taskType: string): string[] {
-  const taskConfig = TASK_TYPE_COLUMNS[taskType as keyof typeof TASK_TYPE_COLUMNS];
-  if (!taskConfig) return [];
-  
-  return taskConfig.optional.filter(col =>
-    columns.some(dataCol => dataCol.toLowerCase() === col.toLowerCase())
-  );
-}
-
-// Export the task type columns configuration
-export { TASK_TYPE_COLUMNS };
-
-// Dataset management functions - DIRECT MOCK DATA (no backend)
-export async function loadEvaluationDatasets(): Promise<EvaluationDataset[]> {
-  // Return mock data directly since no backend
-  console.log('Using direct mock evaluation datasets data');
-  return mockEvaluationDatasets;
-}
-
-// Deployment management functions - DIRECT MOCK DATA (no backend)
-export async function getEvaluationDeployments(): Promise<Deployment[]> {
-  // Return mock data directly since no backend
-  console.log('Using direct mock deployment data');
-  return mockDeployments;
-}
-
-// Evaluation metadata management functions - DIRECT MOCK DATA (no backend)
 export async function getEvaluationMetadata(): Promise<EvaluationMetadata> {
-  // Return mock metadata directly since no backend
-  console.log('Using direct mock metadata');
-  return mockMetadata;
+  console.log('Getting local evaluation metadata');
+  return localMetadata;
 }
 
 export async function updateEvaluationMetadata(updates: Partial<EvaluationMetadata>): Promise<void> {
-  // Update mock data directly since no backend
-  console.log('Updating mock metadata:', updates);
-  mockMetadata = { ...mockMetadata, ...updates };
+  console.log('Updating local metadata:', updates);
+  localMetadata = { ...localMetadata, ...updates };
 }
 
 // Utility functions for generating IDs
@@ -523,28 +305,77 @@ export function generateEvaluationSessionUID(): string {
   return `eval_session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Additional utility functions that were missing
+// Helper functions that now use API data
+export async function getMockEvaluationById(id: string) {
+  try {
+    const response = await dataService.getEvaluation(id);
+    if (response.error) {
+      console.error('Error fetching evaluation by ID:', response.error);
+      return undefined;
+    }
+    return response.data?.evaluation;
+  } catch (error) {
+    console.error('Failed to fetch evaluation by ID:', error);
+    return undefined;
+  }
+}
+
+export async function getMockTasksByEvaluationId(evaluationId: string) {
+  try {
+    const response = await dataService.getEvaluationTasks(evaluationId);
+    if (response.error) {
+      console.error('Error fetching tasks by evaluation ID:', response.error);
+      return [];
+    }
+    return response.data?.tasks || [];
+  } catch (error) {
+    console.error('Failed to fetch tasks by evaluation ID:', error);
+    return [];
+  }
+}
+
+export async function getMockTaskById(id: string) {
+  try {
+    const response = await dataService.getEvaluationTasks();
+    if (response.error) {
+      console.error('Error fetching tasks:', response.error);
+      return undefined;
+    }
+    
+    const tasks = response.data?.tasks || [];
+    return tasks.find((task: any) => task.id === id);
+  } catch (error) {
+    console.error('Failed to fetch task by ID:', error);
+    return undefined;
+  }
+}
+
+// Generate additional mock data for testing
+export const generateMockEvaluation = (overrides: any = {}): any => {
+  const randomId = `eval-${Date.now()}`;
+  return {
+    id: randomId,
+    name: `Test Evaluation ${randomId}`,
+    deployment: 'GPT-4 Customer Support',
+    organization: 'Acme Corporation',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    totalTasks: 10,
+    completedTasks: 0,
+    failedTasks: 0,
+    progress: 0,
+    ...overrides
+  };
+}
+
+// Additional utility functions
 export async function addEvaluationDataset(datasetData: any): Promise<boolean> {
   try {
-    const newDataset: EvaluationDataset = {
-      id: generateEvaluationDatasetUID(),
-      uid: generateEvaluationDatasetUID(),
-      name: datasetData.name,
-      description: datasetData.description || '',
-      size: datasetData.size || 0,
-      status: 'valid',
-      columns: datasetData.columns || [],
-      rows: datasetData.samples || 0,
-      uploadedAt: new Date().toISOString(),
-      filePath: datasetData.filePath,
-      originalFileName: datasetData.originalFileName,
-      taskType: datasetData.taskType,
-      tags: datasetData.tags || [],
-      format: datasetData.format || 'YAML'
-    };
-
-    // TODO: Save to data folder or API
-    console.log('Would save evaluation dataset:', newDataset);
+    // In a real implementation, this would POST to /api/evaluations/datasets
+    console.log('Adding evaluation dataset:', datasetData);
+    
+    // For now, just simulate success
+    await new Promise(resolve => setTimeout(resolve, 500));
     return true;
   } catch (error) {
     console.error('Failed to add evaluation dataset:', error);
@@ -552,51 +383,38 @@ export async function addEvaluationDataset(datasetData: any): Promise<boolean> {
   }
 }
 
-export async function updateEvaluationDataset(datasetId: string, updates: Partial<EvaluationDataset>): Promise<boolean> {
-  try {
-    // TODO: Update in data folder or API
-    console.log('Would update evaluation dataset:', datasetId, updates);
-    return true;
-  } catch (error) {
-    console.error('Failed to update evaluation dataset:', error);
-    return false;
-  }
+// Validate evaluation dataset columns based on task type
+export function validateEvaluationColumns(columns: string[], taskType?: string): boolean {
+  if (!taskType) return true;
+  
+  const requiredColumns: Record<string, string[]> = {
+    'Question Answering': ['input', 'expected_output'],
+    'Text Classification': ['text', 'label'],
+    'Code Generation': ['problem_description', 'expected_code'],
+    'Conversational QA': ['conversation_history', 'question', 'expected_answer'],
+    'Retrieval (RAG)': ['query', 'relevant_documents'],
+    'Open-ended Generation': ['prompt', 'expected_output']
+  };
+  
+  const required = requiredColumns[taskType];
+  if (!required) return true;
+  
+  return required.every(col => columns.includes(col));
 }
 
-export async function deleteEvaluationDataset(datasetId: string): Promise<boolean> {
-  try {
-    // TODO: Delete from data folder or API
-    console.log('Would delete evaluation dataset:', datasetId);
-    return true;
-  } catch (error) {
-    console.error('Failed to delete evaluation dataset:', error);
-    return false;
-  }
+// Load evaluation metadata (for backward compatibility)
+export async function loadEvaluationMetadata(): Promise<EvaluationMetadata> {
+  return getEvaluationMetadata();
 }
 
-export async function updateEvaluationDatasetSelection(dataset: EvaluationDataset): Promise<boolean> {
-  try {
-    await updateEvaluationMetadata({
-      evaluationSession: {
-        status: 'dataset_selected',
-        id: null,
-        createdAt: null,
-        lastModified: null
-      },
-      dataset: {
-        uid: dataset.uid || dataset.id,
-        id: dataset.id,
-        name: dataset.name,
-        selectedAt: new Date().toISOString(),
-        taskType: dataset.taskType || null,
-        rows: dataset.rows,
-        columns: dataset.columns
-      }
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('Failed to update evaluation dataset selection:', error);
-    return false;
-  }
+// Validate metrics configuration
+export function validateMetricsConfiguration(config: MetricsConfiguration): boolean {
+  return !!(config.evaluationModel && config.batchSize > 0 && config.timeout > 0);
+}
+
+// Get metrics summary
+export function getMetricsSummary(categories: MetricCategory[]): string {
+  const selectedCount = categories.filter(cat => cat.selected).length;
+  const totalCount = categories.length;
+  return `${selectedCount}/${totalCount} metric categories selected`;
 }

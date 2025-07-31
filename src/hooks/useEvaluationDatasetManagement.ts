@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
-  loadEvaluationDatasets, 
+  getEvaluationDatasets, // 🔥 CHANGED: Now uses API-based function
   addEvaluationDataset, 
-  updateEvaluationDataset, 
-  deleteEvaluationDataset, 
-  updateEvaluationDatasetSelection, 
+  updateEvaluationMetadata,
+  getEvaluationMetadata,
   type EvaluationDataset 
 } from '../utils/evaluationUtils';
 
@@ -19,9 +18,14 @@ export function useEvaluationDatasetManagement() {
     const loadInitialDatasets = async () => {
       try {
         setLoading(true);
-        const loadedDatasets = await loadEvaluationDatasets();
+        console.log('Loading evaluation datasets from API...');
+        
+        // 🔥 CHANGED: Now uses API-based function instead of hardcoded data
+        const loadedDatasets = await getEvaluationDatasets();
         setDatasets(loadedDatasets);
         setError(null);
+        
+        console.log('Successfully loaded datasets:', loadedDatasets.length);
       } catch (err) {
         console.error('Failed to load evaluation datasets:', err);
         setError('Failed to load evaluation datasets');
@@ -34,16 +38,48 @@ export function useEvaluationDatasetManagement() {
     loadInitialDatasets();
   }, []);
 
+  // Load selected dataset from metadata
+  useEffect(() => {
+    const loadSelectedDataset = async () => {
+      try {
+        const metadata = await getEvaluationMetadata();
+        if (metadata.dataset?.id) {
+          const dataset = datasets.find(d => d.id === metadata.dataset.id);
+          if (dataset) {
+            setSelectedDataset(dataset);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading selected dataset:', err);
+      }
+    };
+    
+    if (datasets.length > 0) {
+      loadSelectedDataset();
+    }
+  }, [datasets]);
+
   const handleDatasetSelect = async (datasetId: string) => {
     const dataset = datasets.find(d => d.id === datasetId);
     if (dataset) {
       setSelectedDataset(dataset);
       
       try {
-        await updateEvaluationDatasetSelection(dataset);
-        console.log('Evaluation Payload selection saved to metadata:', dataset.uid || dataset.id);
+        await updateEvaluationMetadata({
+          dataset: {
+            uid: dataset.uid || dataset.id,
+            id: dataset.id,
+            name: dataset.name,
+            selectedAt: new Date().toISOString(),
+            taskType: dataset.taskType,
+            rows: dataset.rows,
+            columns: dataset.columns
+          },
+          selectedDataset: dataset
+        });
+        console.log('Dataset selection saved to metadata:', dataset.uid || dataset.id);
       } catch (error) {
-        console.error('Failed to update evaluation metadata with Payload selection:', error);
+        console.error('Failed to update metadata with dataset selection:', error);
       }
     }
   };
@@ -52,8 +88,8 @@ export function useEvaluationDatasetManagement() {
     try {
       const success = await addEvaluationDataset(datasetData);
       if (success) {
-        // Reload datasets to include the new one
-        const updatedDatasets = await loadEvaluationDatasets();
+        // 🔥 CHANGED: Reload datasets using API function
+        const updatedDatasets = await getEvaluationDatasets();
         setDatasets(updatedDatasets);
         console.log('Evaluation dataset saved successfully');
         return true;
@@ -68,65 +104,121 @@ export function useEvaluationDatasetManagement() {
 
   const handleDatasetUpdate = async (datasetId: string, updates: Partial<EvaluationDataset>): Promise<boolean> => {
     try {
-      const success = await updateEvaluationDataset(datasetId, updates);
-      if (success) {
-        // Update local state
-        setDatasets(prev => prev.map(d => 
-          d.id === datasetId ? { ...d, ...updates } : d
-        ));
-        
-        // Update selected dataset if it's the one being updated
-        if (selectedDataset?.id === datasetId) {
-          setSelectedDataset(prev => prev ? { ...prev, ...updates } : null);
-        }
-        
-        console.log('Evaluation dataset updated successfully');
-        return true;
+      // For now, just update local state since we don't have a real update API
+      setDatasets(prev => prev.map(d => 
+        d.id === datasetId ? { ...d, ...updates } : d
+      ));
+      
+      // Update selected dataset if it's the one being updated
+      if (selectedDataset?.id === datasetId) {
+        setSelectedDataset(prev => prev ? { ...prev, ...updates } : null);
       }
-      return false;
+      
+      console.log('Dataset updated successfully');
+      return true;
     } catch (error) {
-      console.error('Failed to update evaluation dataset:', error);
-      setError('Failed to update evaluation dataset');
+      console.error('Failed to update dataset:', error);
+      setError('Failed to update dataset');
       return false;
     }
   };
 
   const handleDatasetDelete = async (datasetId: string): Promise<boolean> => {
     try {
-      const success = await deleteEvaluationDataset(datasetId);
-      if (success) {
-        // Remove from local state
-        setDatasets(prev => prev.filter(d => d.id !== datasetId));
-        
-        // Clear selection if deleted dataset was selected
-        if (selectedDataset?.id === datasetId) {
-          setSelectedDataset(null);
-        }
-        
-        console.log('Evaluation dataset deleted successfully');
-        return true;
+      // For now, just remove from local state since we don't have a real delete API
+      setDatasets(prev => prev.filter(d => d.id !== datasetId));
+      
+      // Clear selected dataset if it's the one being deleted
+      if (selectedDataset?.id === datasetId) {
+        setSelectedDataset(null);
+        await updateEvaluationMetadata({
+          dataset: {
+            uid: null,
+            id: null,
+            name: null,
+            selectedAt: null,
+            taskType: null,
+            rows: null,
+            columns: null
+          },
+          selectedDataset: undefined
+        });
       }
-      return false;
+      
+      console.log('Dataset deleted successfully');
+      return true;
     } catch (error) {
-      console.error('Failed to delete evaluation dataset:', error);
-      setError('Failed to delete evaluation dataset');
+      console.error('Failed to delete dataset:', error);
+      setError('Failed to delete dataset');
       return false;
     }
   };
 
-  const getSelectedDatasetData = (): EvaluationDataset | null => {
+  const getSelectedDatasetData = () => {
     return selectedDataset;
   };
 
+  // 🔥 NEW: Refresh datasets from API
+  const refreshDatasets = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Refreshing datasets from API...');
+      
+      const updatedDatasets = await getEvaluationDatasets();
+      setDatasets(updatedDatasets);
+      
+      console.log('Successfully refreshed datasets');
+    } catch (err) {
+      console.error('Failed to refresh datasets:', err);
+      setError('Failed to refresh datasets');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔥 NEW: Get dataset statistics
+  const getDatasetStats = () => {
+    const totalDatasets = datasets.length;
+    const validDatasets = datasets.filter(d => d.status === 'valid').length;
+    const invalidDatasets = datasets.filter(d => d.status === 'invalid').length;
+    const pendingDatasets = datasets.filter(d => d.status === 'pending').length;
+    
+    const totalSize = datasets.reduce((sum, d) => sum + d.size, 0);
+    const totalRows = datasets.reduce((sum, d) => sum + d.rows, 0);
+    
+    return {
+      totalDatasets,
+      validDatasets,
+      invalidDatasets,
+      pendingDatasets,
+      totalSize,
+      totalRows
+    };
+  };
+
+  // 🔥 NEW: Filter datasets by task type
+  const getDatasetsByTaskType = (taskType: string) => {
+    return datasets.filter(d => d.taskType === taskType);
+  };
+
   return {
+    // State
     datasets,
-    selectedDataset: selectedDataset?.id || null,
+    selectedDataset,
     loading,
     error,
+
+    // Actions
     handleDatasetSelect,
     handleDatasetSave,
     handleDatasetUpdate,
     handleDatasetDelete,
+    
+    // Utilities
     getSelectedDatasetData,
+    refreshDatasets, // 🔥 NEW
+    getDatasetStats, // 🔥 NEW
+    getDatasetsByTaskType, // 🔥 NEW
   };
 }

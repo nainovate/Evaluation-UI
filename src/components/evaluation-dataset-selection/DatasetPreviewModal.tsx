@@ -57,33 +57,33 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
     // Task-specific validation
     const taskConfig = {
       'Question Answering': {
-        mandatory: ['question', 'expected_answer', 'generated_answer'],
-        optional: ['context', 'reference', 'ground_truth', 'metadata']
-      },
-      'Summarization': {
-        mandatory: ['input_text', 'expected_summary', 'generated_summary'],
-        optional: ['reference_summary', 'metadata', 'source_title']
-      },
-      'Conversational QA': {
-        mandatory: ['conversation_history', 'question', 'expected_answer', 'generated_answer'],
-        optional: ['context', 'turn_id', 'metadata']
-      },
-      'Retrieval (RAG)': {
-        mandatory: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer'],
-        optional: ['ground_truth_docs', 'reference', 'metadata']
-      },
-      'Classification': {
-        mandatory: ['input_text', 'expected_label', 'predicted_label'],
-        optional: ['label_confidence', 'metadata', 'reasoning']
-      },
-      'Structured Output Generation': {
-        mandatory: ['input_instruction', 'expected_output', 'generated_output'],
-        optional: ['format_schema', 'reference', 'metadata']
-      },
-      'Open-ended Generation': {
-        mandatory: ['prompt', 'generated_output'],
-        optional: ['reference_output', 'feedback', 'toxicity_flag', 'metadata']
-      }
+      mandatory: ['question', 'expected_answer'],
+      optional: ['context', 'reference', 'ground_truth', 'metadata']
+    },
+    'Summarization': {
+      mandatory: ['input_text', 'expected_summary'],
+      optional: ['reference_summary', 'metadata', 'source_title', 'length_constraint']
+    },
+    'Conversational QA': {
+      mandatory: ['conversation_history', 'question', 'expected_answer'],
+      optional: ['context', 'turn_id', 'metadata']
+    },
+    'Retrieval (RAG)': {
+      mandatory: ['query', 'retrieved_documents', 'expected_answer'],
+      optional: ['ground_truth_docs', 'reference', 'metadata']
+    },
+    'Classification': {
+      mandatory: ['input_text', 'expected_label'],
+      optional: ['label_confidence', 'metadata', 'reasoning']
+    },
+    'Structured Output Generation': {
+      mandatory: ['input_instruction', 'expected_output'],
+      optional: ['format_schema', 'reference', 'metadata']
+    },
+    'Open-ended Generation': {
+      mandatory: ['prompt'],
+      optional: ['reference_output', 'feedback', 'toxicity_flag', 'metadata']
+    }
     }[currentTaskType];
 
     if (taskConfig) {
@@ -111,16 +111,12 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
       col.toLowerCase().includes('ground_truth')
     );
 
-    const hasGeneratedColumn = previewData.columns.some(col =>
-      col.toLowerCase().includes('generated') ||
-      col.toLowerCase().includes('predicted') ||
-      col.toLowerCase().includes('output')
-    );
+    
 
-    hasRequiredColumns = hasInputColumn && hasExpectedColumn && hasGeneratedColumn;
+    hasRequiredColumns = hasInputColumn && hasExpectedColumn ;
     if (!hasInputColumn) missingColumns.push('input column');
     if (!hasExpectedColumn) missingColumns.push('expected output column');
-    if (!hasGeneratedColumn) missingColumns.push('generated output column');
+    
   }
 
   const canProceed = hasRequiredColumns;
@@ -219,13 +215,13 @@ export const DatasetPreviewModal: React.FC<DatasetPreviewModalProps> = ({
                         <p className="mt-2 text-xs">
                           Required columns for {currentTaskType}: {
                             {
-                              'Question Answering': 'question, expected_answer, generated_answer',
-                              'Summarization': 'input_text, expected_summary, generated_summary',
-                              'Conversational QA': 'conversation_history, question, expected_answer, generated_answer',
-                              'Retrieval (RAG)': 'query, retrieved_documents, expected_answer, generated_answer',
+                              'Question Answering': 'question, expected_answer',
+                              'Summarization': 'input_text, expected_summary',
+                              'Conversational QA': 'conversation_history, question, expected_answer',
+                              'Retrieval (RAG)': 'query, retrieved_documents, expected_answer',
                               'Classification': 'input_text, expected_label, predicted_label',
-                              'Structured Output Generation': 'input_instruction, expected_output, generated_output',
-                              'Open-ended Generation': 'prompt, generated_output'
+                              'Structured Output Generation': 'input_instruction, expected_output',
+                              'Open-ended Generation': 'prompt'
                             }[currentTaskType]
                           }
                         </p>

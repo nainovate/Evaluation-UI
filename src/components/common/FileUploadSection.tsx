@@ -6,12 +6,11 @@ import { Download, Info } from 'lucide-react';
 const TASK_TYPE_CONFIG = {
   'Question Answering': {
     description: 'Models answer questions with evaluation against expected answers',
-    mandatory: ['question', 'expected_answer', 'generated_answer'],
+    mandatory: ['question', 'expected_answer'],
     optional: ['context', 'reference', 'ground_truth', 'metadata'],
     example: {
       question: "What is the capital of France?",
       expected_answer: "Paris",
-      generated_answer: "The capital of France is Paris.",
       context: "Geography knowledge",
       reference: "World Atlas 2024",
       ground_truth: "Paris",
@@ -20,12 +19,11 @@ const TASK_TYPE_CONFIG = {
   },
   'Summarization': {
     description: 'Models create summaries with evaluation against expected outputs',
-    mandatory: ['input_text', 'expected_summary', 'generated_summary'],
+    mandatory: ['input_text', 'expected_summary'],
     optional: ['reference_summary', 'metadata', 'source_title'],
     example: {
       input_text: "Long article about climate change impacts on agriculture...",
       expected_summary: "Climate change significantly affects crop yields and farming practices.",
-      generated_summary: "Global warming is impacting agricultural productivity worldwide.",
       reference_summary: "Official IPCC summary on agriculture",
       metadata: { length_constraint: "50 words", domain: "science" },
       source_title: "Climate Change and Agriculture Report 2024"
@@ -33,13 +31,12 @@ const TASK_TYPE_CONFIG = {
   },
   'Conversational QA': {
     description: 'Multi-turn conversation evaluation with context awareness',
-    mandatory: ['conversation_history', 'question', 'expected_answer', 'generated_answer'],
+    mandatory: ['conversation_history', 'question', 'expected_answer'],
     optional: ['context', 'turn_id', 'metadata'],
     example: {
       conversation_history: "User: Hello\\nBot: Hi! How can I help you today?\\nUser: I need help with my account",
       question: "How do I reset my password?",
       expected_answer: "Go to Settings > Security > Reset Password and follow the instructions.",
-      generated_answer: "You can reset your password in the security settings.",
       context: "Customer support conversation",
       turn_id: 3,
       metadata: { session_id: "sess_123", user_type: "premium" }
@@ -47,13 +44,12 @@ const TASK_TYPE_CONFIG = {
   },
   'Retrieval (RAG)': {
     description: 'Retrieval-Augmented Generation with document evaluation',
-    mandatory: ['query', 'retrieved_documents', 'expected_answer', 'generated_answer'],
+    mandatory: ['query', 'retrieved_documents', 'expected_answer'],
     optional: ['ground_truth_docs', 'reference', 'metadata'],
     example: {
       query: "What are the benefits of renewable energy?",
       retrieved_documents: ["doc_solar_2024.pdf", "doc_wind_energy.pdf"],
       expected_answer: "Renewable energy reduces carbon emissions and provides sustainable power.",
-      generated_answer: "Renewable energy sources like solar and wind help reduce environmental impact.",
       ground_truth_docs: ["doc_solar_2024.pdf"],
       reference: "Environmental Protection Agency Report",
       metadata: { retrieval_score: 0.89, num_docs: 2 }
@@ -61,12 +57,11 @@ const TASK_TYPE_CONFIG = {
   },
   'Classification': {
     description: 'Text classification with prediction evaluation',
-    mandatory: ['input_text', 'expected_label', 'predicted_label'],
+    mandatory: ['input_text', 'expected_label'],
     optional: ['label_confidence', 'metadata', 'reasoning'],
     example: {
       input_text: "This product exceeded my expectations! Highly recommended.",
       expected_label: "positive",
-      predicted_label: "positive",
       label_confidence: 0.95,
       metadata: { model_version: "v2.1", category: "sentiment" },
       reasoning: "Positive keywords: exceeded, highly recommended"
@@ -74,12 +69,11 @@ const TASK_TYPE_CONFIG = {
   },
   'Structured Output Generation': {
     description: 'Generation of structured data with format validation',
-    mandatory: ['input_instruction', 'expected_output', 'generated_output'],
+    mandatory: ['input_instruction', 'expected_output'],
     optional: ['format_schema', 'reference', 'metadata'],
     example: {
       input_instruction: "Extract person and company information from: John Doe works at ABC Corp",
       expected_output: { name: "John Doe", company: "ABC Corp", role: null },
-      generated_output: { name: "John Doe", company: "ABC Corp" },
       format_schema: { type: "object", properties: { name: "string", company: "string" } },
       reference: "Information extraction guidelines",
       metadata: { extraction_confidence: 0.92 }
@@ -87,11 +81,10 @@ const TASK_TYPE_CONFIG = {
   },
   'Open-ended Generation': {
     description: 'Creative or open-ended text generation evaluation',
-    mandatory: ['prompt', 'generated_output'],
+    mandatory: ['prompt'],
     optional: ['reference_output', 'feedback', 'toxicity_flag', 'metadata'],
     example: {
       prompt: "Write a short story about a robot learning to paint",
-      generated_output: "In a small workshop, R2D7 discovered brushes and colors...",
       reference_output: "Example creative story about artistic robots",
       feedback: "Creative and engaging narrative",
       toxicity_flag: false,
@@ -246,10 +239,10 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
       
       {/* 🔸 FORM FIELDS - Correct Order: Title → Description → Task Type → Upload */}
       <div className="space-y-4">
-        {/* 1. Dataset Title - FIRST */}
+        {/* 1. Payload Title - FIRST */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Dataset Title <span className="text-red-500">*</span>
+            Payload Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -435,7 +428,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
         {/* 4. Upload File Section - FOURTH AND LAST */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Upload Dataset File
+            Upload Payload File
           </label>
           <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors">
             {uploadedFile ? (
@@ -497,10 +490,10 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                 
                 {/* Upload Text */}
                 <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  {config.description}
+                  Drop your YAML payload file here
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  {config.supportText}
+                  Currently supports YAML files up to 100MB
                 </p>
                 
                 {/* File Input */}
@@ -515,7 +508,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
                   htmlFor="file-upload"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 cursor-pointer transition-colors"
                 >
-                  {config.buttonText}
+                  Choose YAML File
                 </label>
               </>
             )}

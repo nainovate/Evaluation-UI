@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { loadEvaluationMetadata, updateEvaluationMetadata } from '../utils/evaluationUtils';
+import { updateEvaluationMetadata } from '../utils/evaluationUtils';
 import type { MetricCategory, EvaluationMetadata } from '../utils/evaluationUtils';
 
 export const useEvaluationMetricsManagement = () => {
-  const [metricCategories, setMetricCategories] = useState<MetricCategory[]>([
+  // Default metric categories with all blue colors
+  const defaultCategories: MetricCategory[] = [
     {
-      id: 'answer-quality',
-      name: 'Answer Quality',
-      description: 'Evaluate how well responses answer questions and stay grounded in context',
-      icon: '🎯',
-      color: 'indigo',
+      id: 'rag-metrics',
+      name: 'RAG Metrics',
+      description: 'Evaluate retrieval and generation quality in RAG systems',
+      icon: '🔍',
+      color: 'blue',
       selected: false,
       subMetrics: [
         {
@@ -25,93 +26,88 @@ export const useEvaluationMetricsManagement = () => {
           enabled: false
         },
         {
-          id: 'hallucination-detection',
+          id: 'contextual-relevancy',
+          name: 'Contextual Relevancy',
+          description: 'Assesses relevance of retrieved context to the question',
+          enabled: false
+        },
+        {
+          id: 'contextual-precision',
+          name: 'Contextual Precision',
+          description: 'Measures precision of context retrieval',
+          enabled: false
+        },
+        {
+          id: 'contextual-recall',
+          name: 'Contextual Recall',
+          description: 'Measures recall of context retrieval',
+          enabled: false
+        }
+      ]
+    },
+    {
+      id: 'safety-ethics',
+      name: 'Safety & Ethics',
+      description: 'Evaluate safety, bias, and toxicity in LLM outputs',
+      icon: '🛡️',
+      color: 'blue',
+      selected: false,
+      subMetrics: [
+        {
+          id: 'bias',
+          name: 'Bias Detection',
+          description: 'Identifies potential bias in generated responses',
+          enabled: false
+        },
+        {
+          id: 'toxicity',
+          name: 'Toxicity Detection',
+          description: 'Detects harmful or toxic content in outputs',
+          enabled: false
+        },
+        {
+          id: 'hallucination',
           name: 'Hallucination Detection',
-          description: 'Identifies when the model generates false or unsupported information',
+          description: 'Identifies when the model generates false information',
           enabled: false
         }
       ]
     },
     {
-      id: 'context-understanding',
-      name: 'Context Understanding',
-      description: 'Measure how well models comprehend and utilize provided context',
-      icon: '📊',
-      color: 'green',
-      selected: false,
-      subMetrics: [
-        {
-          id: 'context-recall',
-          name: 'Context Recall',
-          description: 'Measures how well the model recalls information from the context',
-          enabled: false
-        },
-        {
-          id: 'factual-consistency',
-          name: 'Factual Consistency',
-          description: 'Evaluates consistency of facts between context and answer',
-          enabled: false
-        }
-      ]
-    },
-    {
-      id: 'similarity-accuracy',
-      name: 'Similarity & Accuracy',
-      description: 'Compare outputs against expected responses using similarity measures',
-      icon: '⚖️',
-      color: 'yellow',
-      selected: false,
-      subMetrics: [
-        {
-          id: 'exact-match',
-          name: 'Exact Match',
-          description: 'Checks if the answer exactly matches the expected response',
-          enabled: false
-        },
-        {
-          id: 'bert-score',
-          name: 'BERTScore',
-          description: 'Semantic similarity using BERT embeddings',
-          enabled: false
-        },
-        {
-          id: 'embedding-distance',
-          name: 'Embedding Distance',
-          description: 'Cosine similarity between answer and reference embeddings',
-          enabled: false
-        }
-      ]
-    },
-    {
-      id: 'language-quality',
-      name: 'Language Quality',
-      description: 'Assess linguistic quality, fluency, and coherence of generated text',
+      id: 'task-specific',
+      name: 'Task-Specific Metrics',
+      description: 'Metrics for specific NLP tasks like summarization',
       icon: '📝',
-      color: 'purple',
+      color: 'blue',
       selected: false,
       subMetrics: [
         {
-          id: 'fluency',
-          name: 'Fluency',
-          description: 'Evaluates the natural flow and readability of the text',
+          id: 'summarization',
+          name: 'Summarization Quality',
+          description: 'Evaluates quality of generated summaries',
           enabled: false
-        },
+        }
+      ]
+    },
+    {
+      id: 'custom-metrics',
+      name: 'Custom Metrics',
+      description: 'Flexible custom evaluation metrics using G-Eval',
+      icon: '⚙️',
+      color: 'blue',
+      selected: false,
+      subMetrics: [
         {
-          id: 'coherence',
-          name: 'Coherence',
-          description: 'Measures logical consistency and clarity of the response',
-          enabled: false
-        },
-        {
-          id: 'conciseness',
-          name: 'Conciseness',
-          description: 'Assesses if the answer is appropriately brief and to the point',
+          id: 'g-eval',
+          name: 'G-Eval',
+          description: 'Custom evaluation using LLM-as-a-judge',
           enabled: false
         }
       ]
     }
-  ]);
+  ];
 
+  const [metricCategories, setMetricCategories] = useState<MetricCategory[]>(defaultCategories);
   const [selectedMetrics, setSelectedMetrics] = useState<MetricCategory[]>([]);
   const [evaluationModel, setEvaluationModel] = useState('gpt-4');
   const [batchSize, setBatchSize] = useState(50);
@@ -119,130 +115,33 @@ export const useEvaluationMetricsManagement = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load existing configuration on mount
+  // Load existing configuration on mount (simplified)
   useEffect(() => {
     const loadConfiguration = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        // Always start with fresh default categories - no persistence
-        const defaultCategories = [
-          {
-            id: 'answer-quality',
-            name: 'Answer Quality',
-            description: 'Evaluate how well responses answer questions and stay grounded in context',
-            icon: '🎯',
-            color: 'indigo',
-            selected: false,
-            subMetrics: [
-              {
-                id: 'answer-relevancy',
-                name: 'Answer Relevancy',
-                description: 'Measures how relevant the answer is to the given question',
-                enabled: false
-              },
-              {
-                id: 'faithfulness',
-                name: 'Faithfulness',
-                description: 'Evaluates if the answer is grounded in the provided context',
-                enabled: false
-              },
-              {
-                id: 'hallucination-detection',
-                name: 'Hallucination Detection',
-                description: 'Identifies when the model generates false or unsupported information',
-                enabled: false
-              }
-            ]
-          },
-          {
-            id: 'context-understanding',
-            name: 'Context Understanding',
-            description: 'Measure how well models comprehend and utilize provided context',
-            icon: '📊',
-            color: 'green',
-            selected: false,
-            subMetrics: [
-              {
-                id: 'context-recall',
-                name: 'Context Recall',
-                description: 'Measures how well the model recalls information from the context',
-                enabled: false
-              },
-              {
-                id: 'factual-consistency',
-                name: 'Factual Consistency',
-                description: 'Evaluates consistency of facts between context and answer',
-                enabled: false
-              }
-            ]
-          },
-          {
-            id: 'similarity-accuracy',
-            name: 'Similarity & Accuracy',
-            description: 'Compare outputs against expected responses using similarity measures',
-            icon: '⚖️',
-            color: 'yellow',
-            selected: false,
-            subMetrics: [
-              {
-                id: 'exact-match',
-                name: 'Exact Match',
-                description: 'Checks if the answer exactly matches the expected response',
-                enabled: false
-              },
-              {
-                id: 'bert-score',
-                name: 'BERTScore',
-                description: 'Semantic similarity using BERT embeddings',
-                enabled: false
-              },
-              {
-                id: 'embedding-distance',
-                name: 'Embedding Distance',
-                description: 'Cosine similarity between answer and reference embeddings',
-                enabled: false
-              }
-            ]
-          },
-          {
-            id: 'language-quality',
-            name: 'Language Quality',
-            description: 'Assess linguistic quality, fluency, and coherence of generated text',
-            icon: '📝',
-            color: 'purple',
-            selected: false,
-            subMetrics: [
-              {
-                id: 'fluency',
-                name: 'Fluency',
-                description: 'Evaluates the natural flow and readability of the text',
-                enabled: false
-              },
-              {
-                id: 'coherence',
-                name: 'Coherence',
-                description: 'Measures logical consistency and clarity of the response',
-                enabled: false
-              },
-              {
-                id: 'conciseness',
-                name: 'Conciseness',
-                description: 'Assesses if the answer is appropriately brief and to the point',
-                enabled: false
-              }
-            ]
+        // Try to load from localStorage
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('evaluationMetrics');
+          if (stored) {
+            const data = JSON.parse(stored);
+            if (data.categories) {
+              setMetricCategories(data.categories);
+              setSelectedMetrics(data.categories.filter((cat: MetricCategory) => cat.selected));
+            }
+            if (data.configuration) {
+              setEvaluationModel(data.configuration.evaluationModel || 'gpt-4');
+              setBatchSize(data.configuration.batchSize || 50);
+              setTimeout(data.configuration.timeout || 30);
+            }
           }
-        ];
-
-        setMetricCategories(defaultCategories);
-        setSelectedMetrics([]);
-        setEvaluationModel('gpt-4');
-        setBatchSize(50);
-        setTimeout(30);
+        }
+        
       } catch (err) {
         console.error('Error loading metrics configuration:', err);
-        setError('Failed to load existing configuration');
+        // Don't set error state, just use defaults
       } finally {
         setLoading(false);
       }
@@ -255,7 +154,7 @@ export const useEvaluationMetricsManagement = () => {
     setMetricCategories(prev => {
       const newCategories = prev.map(category => ({
         ...category,
-        selected: category.id === categoryId, // Only allow one category to be selected
+        selected: category.id === categoryId, // Only allow one category selected
         subMetrics: category.id === categoryId 
           ? category.subMetrics // Keep sub-metrics as they are for selected category
           : category.subMetrics.map(sm => ({ ...sm, enabled: false })) // Reset sub-metrics for unselected categories
@@ -327,19 +226,31 @@ export const useEvaluationMetricsManagement = () => {
         throw new Error('No category selected');
       }
 
-      await updateEvaluationMetadata({
-        metrics: {
-          categories: metricCategories,
-          selectedCategory: selectedCategory.id,
-          totalSelected: getTotalSelectedMetrics(),
-          configuration: {
-            evaluationModel,
-            batchSize,
-            timeout
-          },
-          configuredAt: new Date().toISOString()
-        }
-      });
+      const configData = {
+        categories: metricCategories,
+        selectedCategory: selectedCategory.id,
+        totalSelected: getTotalSelectedMetrics(),
+        configuration: {
+          evaluationModel,
+          batchSize,
+          timeout
+        },
+        configuredAt: new Date().toISOString()
+      };
+
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('evaluationMetrics', JSON.stringify(configData));
+      }
+
+      // Also try to update main metadata
+      try {
+        await updateEvaluationMetadata({
+          metrics: configData
+        });
+      } catch (metadataError) {
+        console.log('Could not update main metadata, but local config saved');
+      }
 
       console.log('✅ Metrics configuration saved successfully');
     } catch (err) {

@@ -17,6 +17,7 @@ import {
 import { validateEvaluationColumns } from '../../utils/evaluationUtils';
 import type { EvaluationDataset, EvaluationMetadata } from '../../utils/evaluationUtils';
 
+
 interface DatasetSelectionStepProps {
   metadata: EvaluationMetadata;
   onComplete: (data: any) => void;
@@ -204,10 +205,10 @@ export const DatasetSelectionStep: React.FC<DatasetSelectionStepProps> = ({
       {/* Step Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          Select Evaluation Dataset
+          Select Evaluation Payload
         </h2>
         <p className="text-gray-600 dark:text-gray-400">
-          Choose a dataset to evaluate your model's performance
+          Choose a payload to evaluate your model's performance
         </p>
       </div>
 
