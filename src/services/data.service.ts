@@ -1,16 +1,27 @@
 // src/services/data.service.ts
+import fs from 'fs/promises';
+import path from 'path';
+
 export interface DataResponse<T> {
   data?: T;
   error?: string;
 }
 
 class DataService {
+  getDashboardStats() {
+    throw new Error('Method not implemented.');
+  }
   private baseUrl: string;
+  private dataPath: string;
 
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+    // For server-side file operations
+    this.dataPath = path.join(process.cwd(), 'src', 'data');
   }
 
+  // ========== CLIENT-SIDE API METHODS ==========
+  
   private async fetchData<T>(
     endpoint: string,
     options?: RequestInit
@@ -36,8 +47,6 @@ class DataService {
     }
   }
 
-  // ========== EXISTING METHODS (Collections, Pipelines, etc.) ==========
-  
   // Collections
   async getCollections() {
     return this.fetchData<{ collections: any[] }>('/api/collections');
@@ -134,18 +143,13 @@ class DataService {
     });
   }
 
-  // ========== NEW EVALUATION METHODS ==========
+  // ========== EVALUATION METHODS ==========
 
   // Get all evaluation data
   async getEvaluations() {
     return this.fetchData<{
       evaluationRuns: any[];
-      evaluationTasks: any[];
-      organizations: any[];
-      deployments: any[];
-      payloadTemplates: any[];
       dashboardStats: any;
-      evaluationDatasets: any[];
     }>('/api/evaluations');
   }
 
@@ -199,6 +203,78 @@ class DataService {
     return this.fetchData<{ success: boolean }>(`/api/evaluations/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  // Dashboard config
+  async getDashboardConfig() {
+    return this.fetchData<any>('/api/dashboard/config');
+  }
+
+  // ========== SERVER-SIDE STORAGE METHODS ==========
+  // These methods are for server-side use only (in API routes)
+
+  /**
+   * Read JSON file (server-side only)
+   */
+  async readJSONFile<T>(filename: string): Promise<T> {
+    try {
+      const filePath = path.join(this.dataPath, filename);
+      const data = await fs.readFile(filePath, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      console.error(`Error reading ${filename}:`, error);
+      throw new Error(`Failed to read ${filename}`);
+    }
+  }
+
+  /**
+   * Write JSON file (server-side only)
+   */
+  async writeJSONFile<T>(filename: string, data: T): Promise<void> {
+    try {
+      const filePath = path.join(this.dataPath, filename);
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (error) {
+      console.error(`Error writing ${filename}:`, error);
+      throw new Error(`Failed to write ${filename}`);
+    }
+  }
+
+  /**
+   * Update JSON file with a transformer function (server-side only)
+   */
+  async updateJSONFile<T>(
+    filename: string, 
+    transformer: (data: T) => T
+  ): Promise<T> {
+    const data = await this.readJSONFile<T>(filename);
+    const updated = transformer(data);
+    await this.writeJSONFile(filename, updated);
+    return updated;
+  }
+
+  /**
+   * Check if file exists (server-side only)
+   */
+  async fileExists(filename: string): Promise<boolean> {
+    try {
+      const filePath = path.join(this.dataPath, filename);
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Ensure data directory exists (server-side only)
+   */
+  async ensureDataDirectory(): Promise<void> {
+    try {
+      await fs.mkdir(this.dataPath, { recursive: true });
+    } catch (error) {
+      console.error('Error creating data directory:', error);
+    }
   }
 }
 
