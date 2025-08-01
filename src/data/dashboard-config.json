@@ -1,0 +1,32 @@
+{
+  "dashboard": {
+    "title": "Evaluation Dashboard",
+    "subtitle": "Monitor and manage your AI model evaluations",
+    "refreshInterval": 30000,
+    "pagination": {
+      "cardsPerView": 3,
+      "autoScroll": false
+    },
+    "features": {
+      "realTimeUpdates": true,
+      "notifications": true,
+      "exportData": true
+    }
+  },
+  "navigation": {
+    "scrollSpeed": 350,
+    "animationDuration": 300,
+    "enableKeyboard": true
+  },
+  "display": {
+    "showProgress": true,
+    "showMetrics": true,
+    "showTags": true,
+    "maxTagsVisible": 2
+  },
+  "routes": {
+    "createEvaluation": "/evaluation/start",
+    "evaluationDetails": "/evaluation/status",
+    "evaluationList": "/evaluations"
+  }
+}

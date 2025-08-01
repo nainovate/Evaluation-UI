@@ -1,0 +1,19 @@
+{
+  "dashboardStats": {
+    "totalEvaluations": 859,
+    "activeEvaluations": 12,
+    "completedEvaluations": 847,
+    "failedEvaluations": 24,
+    "averageSuccessRate": 94.8,
+    "totalDatasets": 24,
+    "activeDetails": {
+      "running": 3,
+      "queued": 9
+    },
+    "trends": {
+      "completedChange": "+23 from last week",
+      "datasetsChange": "+ 1 this month", 
+      "successRateChange": "+1.2% this week"
+    }
+  }
+}

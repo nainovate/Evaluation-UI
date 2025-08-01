@@ -1,13 +1,69 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BaseLayout } from '../../components/layouts/BaseLayout'
 
 export default function NainovateDashboard() {
   const router = useRouter()
   const [currentJobIndex, setCurrentJobIndex] = useState(0)
-  const [pastEvaluationIndex, setPastEvaluationIndex] = useState(0) // New state for past evaluations
+  const [pastEvaluationIndex, setPastEvaluationIndex] = useState(0)
+
+  // API Data State - NO hardcoded values
+  const [dashboardData, setDashboardData] = useState({
+    stats: null as any,
+    currentJobs: [] as any[],
+    pastEvaluations: [] as any[]
+  })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Load data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Call API directly
+        const response = await fetch('/api/evaluations')
+        
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`)
+        }
+        
+        const apiData = await response.json()
+        
+        if (!apiData.success || !apiData.data) {
+          throw new Error('Invalid API response format')
+        }
+
+        const { dashboardStats, evaluationRuns } = apiData.data
+
+        // Separate current jobs (in-progress/pending) from past evaluations (completed/failed)
+        const currentJobs = evaluationRuns.filter((run: any) => 
+          run.status === 'in-progress' || run.status === 'pending'
+        )
+        const pastEvaluations = evaluationRuns.filter((run: any) => 
+          run.status === 'completed' || run.status === 'failed'
+        )
+
+        setDashboardData({
+          stats: dashboardStats,
+          currentJobs,
+          pastEvaluations
+        })
+
+      } catch (err) {
+        console.error('Error loading dashboard:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
 
   const handleCreateNewEvaluation = () => {
     router.push('/evaluation/start')
@@ -17,9 +73,8 @@ export default function NainovateDashboard() {
     router.push(`/evaluation/status?name=${encodeURIComponent(evaluationName)}`)
   }
 
-
   const scrollJobs = (direction: 'left' | 'right') => {
-    const maxIndex = 2
+    const maxIndex = Math.max(0, dashboardData.currentJobs.length - 3)
     if (direction === 'left' && currentJobIndex > 0) {
       setCurrentJobIndex(currentJobIndex - 1)
     } else if (direction === 'right' && currentJobIndex < maxIndex) {
@@ -27,9 +82,8 @@ export default function NainovateDashboard() {
     }
   }
 
-  // New function for past evaluations scrolling
   const scrollPastEvaluations = (direction: 'left' | 'right') => {
-    const maxIndex = 3 // We have 6 cards, showing 3 at a time, so max index is 3
+    const maxIndex = Math.max(0, dashboardData.pastEvaluations.length - 3)
     if (direction === 'left' && pastEvaluationIndex > 0) {
       setPastEvaluationIndex(pastEvaluationIndex - 1)
     } else if (direction === 'right' && pastEvaluationIndex < maxIndex) {
@@ -37,82 +91,58 @@ export default function NainovateDashboard() {
     }
   }
 
-  // Past evaluations data with enhanced structure
-  const pastEvaluations = [
-    {
-      name: 'Customer Support Baseline',
-      status: 'completed',
-      completedDate: '7/8/2025',
-      model: 'Claude-3 Sonnet',
-      dataset: 'Customer Support Conversations v1',
-      metrics: { accuracy: '94.2%', relevancy: '92.8%' },
-      tags: ['customer-service', 'baseline']
-    },
-    {
-      name: 'Content Generation Eval',
-      status: 'completed',
-      completedDate: '7/6/2025',
-      model: 'GPT-4 Turbo',
-      dataset: 'Content Generation Benchmark',
-      metrics: { coherence: '89.5%', fluency: '96.1%' },
-      tags: ['content', 'generation']
-    },
-    {
-      name: 'Bias Detection Test',
-      status: 'failed',
-      completedDate: '7/4/2025',
-      model: 'GPT-3.5 Turbo',
-      dataset: 'Bias Detection Dataset',
-      error: 'Dataset validation failed',
-      tags: ['bias', 'safety']
-    },
-    {
-      name: 'Code Quality Assessment',
-      status: 'completed',
-      completedDate: '7/2/2025',
-      model: 'Claude-3 Opus',
-      dataset: 'Code Review Evaluation Suite',
-      metrics: { correctness: '91.7%', efficiency: '87.3%' },
-      tags: ['code', 'quality']
-    },
-    {
-      name: 'Multilingual Translation',
-      status: 'completed',
-      completedDate: '6/30/2025',
-      model: 'GPT-4',
-      dataset: 'Translation Quality Benchmark',
-      metrics: { bleu: '84.6', accuracy: '90.2%' },
-      tags: ['translation', 'multilingual']
-    },
-    {
-      name: 'Sentiment Analysis Benchmark',
-      status: 'completed',
-      completedDate: '6/28/2025',
-      model: 'Claude-3 Haiku',
-      dataset: 'Sentiment Analysis Dataset',
-      metrics: { f1Score: '0.923', precision: '94.1%' },
-      tags: ['sentiment', 'classification']
-    }
-  ]
-
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'completed':
-        return {
-          badge: 'bg-green-500',
-          label: 'Completed'
-        };
+        return { badge: 'bg-green-500', label: 'Completed' }
       case 'failed':
-        return {
-          badge: 'bg-red-500',
-          label: 'Failed'
-        };
+        return { badge: 'bg-red-500', label: 'Failed' }
+      case 'in-progress':
+        return { badge: 'status-running bg-blue-600', label: 'running' }
+      case 'pending':
+        return { badge: 'status-queued bg-yellow-600', label: 'queued' }
       default:
-        return {
-          badge: 'bg-gray-500',
-          label: 'Unknown'
-        };
+        return { badge: 'bg-gray-500', label: 'Unknown' }
     }
+  }
+
+  if (loading) {
+    return (
+      <BaseLayout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+          <div className="max-w-7xl mx-auto p-8">
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </BaseLayout>
+    )
+  }
+
+  if (error || !dashboardData.stats) {
+    return (
+      <BaseLayout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+          <div className="max-w-7xl mx-auto p-8">
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <p className="text-red-600 dark:text-red-400 mb-4">{error || 'Failed to load dashboard'}</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </BaseLayout>
+    )
   }
 
   return (
@@ -120,7 +150,7 @@ export default function NainovateDashboard() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto p-8">
           
-          {/* Welcome Section */}
+          {/* ORIGINAL Welcome Section - EXACT LAYOUT */}
           <div className="dashboard-welcome bg-white dark:bg-gray-800 rounded-2xl p-12 mb-8 text-center border border-gray-200 dark:border-gray-700 transition-all duration-300">
             <h1 className="text-4xl font-semibold text-gray-900 dark:text-gray-100 mb-2 transition-colors duration-300">
               Welcome back, Alex
@@ -136,42 +166,58 @@ export default function NainovateDashboard() {
             </button>
           </div>
 
-          {/* Enhanced Statistics Cards */}
+          {/* ORIGINAL Statistics Cards - Using API data, NO hardcoded values */}
           <div className="dashboard-stats grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <div className="stat-card bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">12</div>
-              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Active Evaluations</div>
+              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                {dashboardData.stats.activeEvaluations}
+              </div>
+              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">
+                Active Evaluations
+              </div>
               <div className="stat-change positive bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-lg text-xs font-medium">
-                3 running, 9 queued
+                {dashboardData.stats.activeDetails?.running || 0} running, {dashboardData.stats.activeDetails?.queued || 0} queued
               </div>
             </div>
 
             <div className="stat-card bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">847</div>
-              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Completed Evaluations</div>
+              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                {dashboardData.stats.completedEvaluations}
+              </div>
+              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">
+                Completed Evaluations
+              </div>
               <div className="stat-change positive bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-lg text-xs font-medium">
-                +23 from last week
+                {dashboardData.stats.trends?.completedChange || 'No data'}
               </div>
             </div>
 
             <div className="stat-card bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">24</div>
-              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Datasets</div>
+              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                {dashboardData.stats.totalDatasets}
+              </div>
+              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">
+                Total Datasets
+              </div>
               <div className="stat-change positive bg-green-100 dark:bg-green-700/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-lg text-xs font-medium">
-                + 1 this month
+                {dashboardData.stats.trends?.datasetsChange || 'No data'}
               </div>
             </div>
 
             <div className="stat-card bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">94.8%</div>
-              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Evaluation Success Rate</div>
+              <div className="stat-number text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                {dashboardData.stats.averageSuccessRate}%
+              </div>
+              <div className="stat-label text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">
+                Evaluation Success Rate
+              </div>
               <div className="stat-change positive bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded-lg text-xs font-medium">
-                +1.2% this week
+                {dashboardData.stats.trends?.successRateChange || 'No data'}
               </div>
             </div>
           </div>
 
-          {/* Current Evaluations Section */}
+          {/* ORIGINAL Current Evaluations Section */}
           <div className="dashboard-section-title text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-6">
             Current Evaluations
           </div>
@@ -188,7 +234,7 @@ export default function NainovateDashboard() {
             
             <button 
               onClick={() => scrollJobs('right')}
-              disabled={currentJobIndex === 2}
+              disabled={currentJobIndex >= Math.max(0, dashboardData.currentJobs.length - 3)}
               className="jobs-nav-btn next absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed z-10"
             >
               ›
@@ -200,144 +246,71 @@ export default function NainovateDashboard() {
                 className="jobs-grid flex gap-6 transition-transform duration-300"
                 style={{ transform: `translateX(-${currentJobIndex * 350}px)` }}
               >
-                {/* Current Job Cards - keeping original cards */}
-                <div 
-                  className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                  onClick={() => handleViewEvaluationDetails('Customer Support Evaluation')}
-                >
-                  <div className="job-header flex justify-between items-start mb-4">
-                    <div className="job-title text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Customer Support Evaluation
-                    </div>
-                    <span className="job-status status-running bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      running
-                    </span>
-                  </div>
+                {/* Dynamic Current Job Cards */}
+                {dashboardData.currentJobs.map((evaluation: any) => {
+                  const statusConfig = getStatusConfig(evaluation.status)
                   
-                  <div className="job-details space-y-2 mb-4">
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Model: Claude-3.5 Sonnet</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Dataset: Customer Support Conversations v2</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Started: 6/30/2025</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Metrics: Answer Relevancy, Faithfulness</div>
-                  </div>
-                  
-                  <div className="job-progress">
-                    <div className="progress-label flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Progress</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">75%</span>
+                  return (
+                    <div 
+                      key={evaluation.id}
+                      className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
+                      onClick={() => handleViewEvaluationDetails(evaluation.name)}
+                    >
+                      <div className="job-header flex justify-between items-start mb-4">
+                        <div className="job-title text-lg font-semibold text-gray-900 dark:text-gray-100">
+                          {evaluation.name}
+                        </div>
+                        <span className={`job-status ${statusConfig.badge} text-white px-3 py-1 rounded-full text-xs font-medium`}>
+                          {statusConfig.label}
+                        </span>
+                      </div>
+                      
+                      <div className="job-details space-y-2 mb-4">
+                        <div className="job-detail text-sm text-gray-600 dark:text-gray-400">
+                          Model: {evaluation.model}
+                        </div>
+                        <div className="job-detail text-sm text-gray-600 dark:text-gray-400">
+                          Dataset: {evaluation.dataset}
+                        </div>
+                        <div className="job-detail text-sm text-gray-600 dark:text-gray-400">
+                          Started: {new Date(evaluation.createdAt).toLocaleDateString()}
+                        </div>
+                        {evaluation.metrics && Array.isArray(evaluation.metrics) && (
+                          <div className="job-detail text-sm text-gray-600 dark:text-gray-400">
+                            Metrics: {evaluation.metrics.join(', ')}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {evaluation.status === 'in-progress' && (
+                        <div className="job-progress">
+                          <div className="progress-label flex justify-between items-center mb-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Progress</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {evaluation.progress}%
+                            </span>
+                          </div>
+                          <div className="progress-bar w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div 
+                              className="progress-fill bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                              style={{ width: `${evaluation.progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="progress-bar w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="progress-fill bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: '75%' }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Add all your other current job cards here... */}
-                <div 
-                  className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                  onClick={() => handleViewEvaluationDetails('Content Quality Assessment')}
-                >
-                  <div className="job-header flex justify-between items-start mb-4">
-                    <div className="job-title text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Content Quality Assessment
-                    </div>
-                    <span className="job-status status-queued bg-yellow-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      queued
-                    </span>
-                  </div>
-                  
-                  <div className="job-details space-y-2 mb-4">
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Model: GPT-4 Turbo</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Dataset: Content Generation Benchmark</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Started: 6/30/2025</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Metrics: Coherence, Contextual Relevancy</div>
-                  </div>
-                </div>
-
-                {/* Continue with other current job cards... (add remaining 3 cards) */}
-                <div 
-                  className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                  onClick={() => handleViewEvaluationDetails('Code Review Analysis')}
-                >
-                  <div className="job-header flex justify-between items-start mb-4">
-                    <div className="job-title text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Code Review Analysis
-                    </div>
-                    <span className="job-status status-created bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      created
-                    </span>
-                  </div>
-                  
-                  <div className="job-details space-y-2 mb-4">
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Model: Claude-3 Opus</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Dataset: Code Review Evaluation Suite</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Started: 7/1/2025</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Metrics: Correctness, Efficiency</div>
-                  </div>
-                </div>
-
-                <div 
-                  className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                  onClick={() => handleViewEvaluationDetails('Medical Response Accuracy')}
-                >
-                  <div className="job-header flex justify-between items-start mb-4">
-                    <div className="job-title text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Medical Response Accuracy
-                    </div>
-                    <span className="job-status status-running bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      running
-                    </span>
-                  </div>
-                  
-                  <div className="job-details space-y-2 mb-4">
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Model: Claude-3 Sonnet</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Dataset: Medical QA Evaluation</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Started: 6/29/2025</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Metrics: Medical Accuracy, Safety</div>
-                  </div>
-                  
-                  <div className="job-progress">
-                    <div className="progress-label flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">Progress</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">42%</span>
-                    </div>
-                    <div className="progress-bar w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                      <div className="progress-fill bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: '42%' }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div 
-                  className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
-                  onClick={() => handleViewEvaluationDetails('Translation Quality Check')}
-                >
-                  <div className="job-header flex justify-between items-start mb-4">
-                    <div className="job-title text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Translation Quality Check
-                    </div>
-                    <span className="job-status status-queued bg-yellow-600 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      queued
-                    </span>
-                  </div>
-                  
-                  <div className="job-details space-y-2 mb-4">
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Model: GPT-4</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Dataset: Translation Quality Benchmark</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Created: 6/28/2025</div>
-                    <div className="job-detail text-sm text-gray-600 dark:text-gray-400">Metrics: BLEU Score, Fluency</div>
-                  </div>
-                </div>
+                  )
+                })}
               </div>
             </div>
           </div>
 
-          {/* Past Evaluations Section - Updated with Side Arrow Navigation */}
+          {/* ORIGINAL Past Evaluations Section */}
           <div className="past-evaluations-section">
             <div className="section-header flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Past Evaluations</h2>
             </div>
             
-            {/* Past Evaluations Container with Navigation */}
             <div className="past-evaluations-container relative">
               {/* Navigation Buttons */}
               <button 
@@ -350,24 +323,24 @@ export default function NainovateDashboard() {
               
               <button 
                 onClick={() => scrollPastEvaluations('right')}
-                disabled={pastEvaluationIndex === 3}
+                disabled={pastEvaluationIndex >= Math.max(0, dashboardData.pastEvaluations.length - 3)}
                 className="past-nav-btn next absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed z-10"
               >
                 ›
               </button>
 
-              {/* Past Evaluations Grid with Scroll */}
+              {/* Past Evaluations Grid */}
               <div className="past-evaluations-scroll-wrapper overflow-hidden mx-8">
                 <div 
                   className="past-evaluations-grid flex gap-6 transition-transform duration-300"
                   style={{ transform: `translateX(-${pastEvaluationIndex * 350}px)` }}
                 >
-                  {pastEvaluations.map((evaluation, index) => {
-                    const statusConfig = getStatusConfig(evaluation.status);
+                  {dashboardData.pastEvaluations.map((evaluation: any) => {
+                    const statusConfig = getStatusConfig(evaluation.status)
                     
                     return (
                       <div 
-                        key={index}
+                        key={evaluation.id}
                         className="job-card flex-shrink-0 w-80 bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer"
                         onClick={() => handleViewEvaluationDetails(evaluation.name)}
                       >
@@ -390,9 +363,9 @@ export default function NainovateDashboard() {
                             📊 {evaluation.dataset}
                           </div>
                           <div className="job-detail text-sm text-gray-600 dark:text-gray-400">
-                            📅 Completed: {evaluation.completedDate}
+                            📅 Completed: {evaluation.completedDate || new Date(evaluation.createdAt).toLocaleDateString()}
                           </div>
-                          {evaluation.status === 'completed' && evaluation.metrics && (
+                          {evaluation.status === 'completed' && evaluation.metrics && typeof evaluation.metrics === 'object' && (
                             <div className="job-detail text-sm text-gray-600 dark:text-gray-400">
                               🎯 Metrics: {Object.keys(evaluation.metrics).join(', ')}
                             </div>
@@ -402,7 +375,7 @@ export default function NainovateDashboard() {
                         {/* Tags */}
                         {evaluation.tags && (
                           <div className="job-tags flex gap-1 items-center mb-3">
-                            {evaluation.tags.slice(0, 2).map((tag, tagIndex) => (
+                            {evaluation.tags.slice(0, 2).map((tag: string, tagIndex: number) => (
                               <span key={tagIndex} className="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs">
                                 {tag}
                               </span>
@@ -416,7 +389,7 @@ export default function NainovateDashboard() {
                         )}
 
                         {/* Metrics Results or Error */}
-                        {evaluation.status === 'completed' && evaluation.metrics ? (
+                        {evaluation.status === 'completed' && evaluation.metrics && typeof evaluation.metrics === 'object' ? (
                           <div className="metrics-results">
                             <div className="metrics-grid grid grid-cols-2 gap-2">
                               {Object.entries(evaluation.metrics).map(([key, value], metricIndex) => (
@@ -442,7 +415,7 @@ export default function NainovateDashboard() {
                           </div>
                         )}
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </div>
