@@ -1,7 +1,7 @@
 export const evaluation = {
   flow: [
     'Select Payload',
-    'Select Model',
+    'Select Inference',
     'Set Metrics',
     'Review & Launch',
     'Success'

@@ -235,7 +235,7 @@ export default function AddDeploymentModal({ onClose, onAdd }: AddDeploymentModa
               className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Deployment
+              Add Pipeline
             </button>
           </div>
         </form>

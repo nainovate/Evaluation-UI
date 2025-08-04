@@ -1,6 +1,5 @@
-// src/hooks/useEvaluationData.ts - Updated to use API-based data
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { dataService } from '@/services/data.service';
 import { 
   getEvaluationDatasets,
@@ -12,7 +11,6 @@ import {
   generateMockEvaluation
 } from '@/utils/evaluationUtils';
 
-// Types
 interface EvaluationData {
   id: string;
   name: string;
@@ -69,8 +67,10 @@ export function useEvaluationData(): UseEvaluationDataReturn {
   const [dashboardStats, setDashboardStats] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const fetchAttemptedRef = useRef<Set<string>>(new Set());
 
-  // Generate stages from config (keep this helper function)
+  // Generate stages from config
   const generateStagesFromConfig = useCallback((currentStage: string) => {
     const allStages = [
       { name: 'Dataset Loading', status: 'completed', description: 'Loading and validating evaluation data' },
@@ -88,118 +88,150 @@ export function useEvaluationData(): UseEvaluationDataReturn {
     }));
   }, []);
 
-  // Generate mock evaluation data (for individual evaluation detail view)
+  // Generate mock evaluation data
   const generateMockEvaluationData = useCallback((evaluationName: string): EvaluationData => {
     return {
       id: `eval-${Date.now()}`,
       name: evaluationName,
-      deployment: 'GPT-4 Customer Support',
-      organization: 'Acme Corporation',
+      deployment: 'GPT-4 Medical Support',
+      organization: 'Healthcare AI Corp',
       status: Math.random() > 0.5 ? 'running' : 'completed',
-      model: 'Claude-3 Sonnet',
-      modelVersion: 'claude-3-sonnet-20240229',
-      dataset: 'Customer Support Conversations v2',
-      datasetSize: '15,420 samples • 2.8 GB',
-      owner: 'alex.chen@company.com',
-      created: '6/30/2025',
       progress: Math.floor(Math.random() * 100),
       currentStage: 'Evaluation',
       
       stages: generateStagesFromConfig('Evaluation'),
       
       metrics: {
-        answerRelevance: 0.924,
-        coherence: 0.887,
-        helpfulness: 0.913,
-        accuracy: 0.896,
-        currentTask: 1034,
-        totalTasks: 1542
+        answerRelevance: 0.945,
+        coherence: 0.912,
+        helpfulness: 0.889,
+        accuracy: 0.923,
+        currentTask: 567,
+        totalTasks: 875
       },
       systemStatus: {
-        cpuUsage: 23.7,
-        gpuUsage: 78.4,
-        ramUsage: '12.3GB',
-        vramUsage: '18.2GB',
-        temperature: '67°C',
-        diskUsage: '0.8TB'
+        cpuUsage: 18.3,
+        gpuUsage: 82.1,
+        ramUsage: '14.7GB',
+        vramUsage: '20.4GB',
+        temperature: '71°C',
+        diskUsage: '1.2TB'
       },
-      tags: ['customer-service', 'quality-assessment', 'production']
+      tags: ['evaluation', 'quality-assessment']
     };
   }, [generateStagesFromConfig]);
 
-  // Fetch all evaluation data from API
+  // 🔍 IMPROVED: Fetch all evaluation data with detailed debugging
   const refreshData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('Refreshing all evaluation data from APIs...');
+      console.log('🔄 HOOK: Refreshing all evaluation data...');
       
-      // Fetch all data in parallel
-      const [
-        runsData,
-        tasksData,
-        orgsData,
-        deploymentsData,
-        datasetsData,
-        statsData
-      ] = await Promise.all([
-        getEvaluationRuns(),
+      // 🔍 TEST: Direct API call to see what we get
+      console.log('🔍 HOOK: Testing direct API call...');
+      const directResponse = await fetch('/api/evaluations');
+      const directData = await directResponse.json();
+      console.log('🔍 HOOK: Direct API response:', directData);
+      console.log('🔍 HOOK: Direct evaluation runs:', directData.data?.evaluationRuns);
+      console.log('🔍 HOOK: Direct count:', directData.data?.evaluationRuns?.length);
+
+      // Use direct API response for evaluation runs
+      if (directData.success && directData.data?.evaluationRuns) {
+        setEvaluationRuns(directData.data.evaluationRuns);
+        setDashboardStats(directData.data.dashboardStats || {});
+        console.log('✅ HOOK: Set evaluation runs from direct API:', directData.data.evaluationRuns.length);
+      } else {
+        console.log('❌ HOOK: Direct API failed or no data');
+        setEvaluationRuns([]);
+      }
+
+      // Fetch other data using utility functions (but don't wait for them)
+      Promise.all([
         getEvaluationTasks(),
         getEvaluationOrganizations(),
         getEvaluationDeployments(),
-        getEvaluationDatasets(),
-        getDashboardStats()
-      ]);
-
-      setEvaluationRuns(runsData);
-      setEvaluationTasks(tasksData);
-      setOrganizations(orgsData);
-      setDeployments(deploymentsData);
-      setDatasets(datasetsData);
-      setDashboardStats(statsData);
+        getEvaluationDatasets()
+      ]).then(([
+        tasksData,
+        orgsData,
+        deploymentsData,
+        datasetsData
+      ]) => {
+        setEvaluationTasks(tasksData);
+        setOrganizations(orgsData);
+        setDeployments(deploymentsData);
+        setDatasets(datasetsData);
+        console.log('✅ HOOK: Set additional data');
+      }).catch(err => {
+        console.log('⚠️ HOOK: Additional data fetch failed:', err);
+      });
       
-      console.log('Successfully loaded all evaluation data');
+      console.log('✅ HOOK: Successfully loaded main evaluation data');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch evaluation data';
       setError(errorMessage);
-      console.error('Error refreshing evaluation data:', err);
+      console.error('❌ HOOK: Error refreshing evaluation data:', err);
+      
+      // Fallback: try to set some data anyway
+      setEvaluationRuns([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Fetch specific evaluation data
+  // Fetch specific evaluation data with guard
   const fetchEvaluationData = useCallback(async (evaluationName?: string) => {
     const nameToUse = evaluationName || 'Default Evaluation';
+    
+    if (fetchAttemptedRef.current.has(nameToUse)) {
+      console.log(`🔍 HOOK: Already attempted to fetch ${nameToUse}, skipping`);
+      return;
+    }
+    
+    fetchAttemptedRef.current.add(nameToUse);
     
     try {
       setLoading(true);
       setError(null);
       
-      console.log(`Fetching evaluation data for: ${nameToUse}`);
+      console.log(`🔍 HOOK: Fetching evaluation data for: ${nameToUse}`);
       
-      // For now, generate mock data for individual evaluation view
-      // In the future, this could fetch from a specific API endpoint
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const mockData = generateMockEvaluationData(nameToUse);
       setEvaluation(mockData);
       
-      console.log('Successfully loaded evaluation data');
+      console.log('✅ HOOK: Successfully loaded mock evaluation data');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch evaluation';
       setError(errorMessage);
-      console.error('Error fetching evaluation data:', err);
+      console.error('❌ HOOK: Error fetching evaluation data:', err);
     } finally {
       setLoading(false);
     }
   }, [generateMockEvaluationData]);
 
+  // Clear fetch attempts when needed
+  useEffect(() => {
+    fetchAttemptedRef.current.clear();
+  }, []);
+
   // Load initial data when hook mounts
   useEffect(() => {
+    console.log('🔄 HOOK: Initial data load triggered');
     refreshData();
   }, [refreshData]);
+
+  // 🔍 DEBUG: Log state changes
+  useEffect(() => {
+    console.log('🔍 HOOK STATE CHANGE:');
+    console.log('  evaluationRuns.length:', evaluationRuns.length);
+    console.log('  evaluationRuns:', evaluationRuns.map(e => ({ id: e.id, name: e.name })));
+    console.log('  loading:', loading);
+    console.log('  error:', error);
+  }, [evaluationRuns, loading, error]);
 
   return {
     evaluation,

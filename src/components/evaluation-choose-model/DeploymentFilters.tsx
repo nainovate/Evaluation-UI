@@ -35,17 +35,17 @@ export default function DeploymentFilters({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Available Model Deployments
+          Available Inferences
         </h3>
         {/* UPDATED: Disabled button but kept visible */}
         <button
           onClick={handleAddDeployment}
           disabled={true} // CHANGED: Disabled for now
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-gray-400 cursor-not-allowed opacity-50 transition-colors"
-          title="Add Deployment (Coming Soon)"
+          title="Add Pipeline (Coming Soon)"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Deployment
+          Add Pipeline
         </button>
       </div>
       
@@ -55,7 +55,7 @@ export default function DeploymentFilters({
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search deployments..."
+            placeholder="Search inferences..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -63,13 +63,13 @@ export default function DeploymentFilters({
         </div>
 
         {/* Provider Filter */}
-        <select
+         <select
           value={selectedProvider}
           onChange={(e) => onProviderChange(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         >
           <option value="All Providers">All Providers</option>
-          {providers.map((provider) => (
+          {["LLM", "RAG"].map((provider) => (
             <option key={provider} value={provider}>
               {provider}
             </option>
