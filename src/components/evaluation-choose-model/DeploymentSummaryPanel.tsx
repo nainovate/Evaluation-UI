@@ -13,10 +13,10 @@ export default function DeploymentSummaryPanel({ selectedDeployments }: Deployme
         <div className="text-center py-8">
           <Server className="h-8 w-8 text-gray-400 mx-auto mb-2" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No Models Selected
+            No Inferences Selected
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Select one or more model deployments to see their details here.
+            Select one or more inferences to see their details here.
           </p>
         </div>
       </div>
@@ -36,7 +36,7 @@ export default function DeploymentSummaryPanel({ selectedDeployments }: Deployme
       <div className="flex items-center space-x-2 mb-6">
         <CheckCircle className="h-5 w-5 text-green-500" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Selected Models ({selectedDeployments.length})
+          Selected Inferences ({selectedDeployments.length})
         </h3>
       </div>
 

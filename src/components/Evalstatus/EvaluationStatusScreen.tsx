@@ -1,12 +1,12 @@
 // src/components/Evalstatus/EvaluationStatusScreen.tsx
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../ThemeToggle';
 import { EvaluationSidebar } from '../EvaluationSidebar';
 import { EvaluationContent } from './EvaluationContent';
-import { useEvaluationData } from '../../hooks/useEvaluationData'; // Updated hook
+import { useEvaluationData } from '../../hooks/useEvaluationData';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 interface EvaluationStatusScreenProps {
@@ -22,7 +22,6 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
 }) => {
   const router = useRouter();
   
-  // 🔥 FIXED: Use the updated hook that fetches all evaluations
   const { 
     evaluationRuns, 
     loading, 
@@ -33,8 +32,11 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
 
   const [evaluation, setEvaluation] = useState(null);
   const [isLive, setIsLive] = useState(true);
+  
+  // 🔥 FIX: Use ref to track if we've already tried to fetch data
+  const hasFetchedRef = useRef(false);
 
-  // 🔥 FIXED: Find the specific evaluation from the API data
+  // 🔥 FIXED: Remove fetchEvaluationData from dependency array and add guard
   useEffect(() => {
     if (evaluationRuns.length > 0) {
       // Try to find evaluation by name (decoded)
@@ -72,7 +74,7 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
             helpfulness: 0.913,
             accuracy: 0.896,
             currentTask: foundEvaluation.completedTasks || 0,
-            totalTasks: foundEvaluation.totalTasks || 1000
+            totalTasks: foundEvaluation.totalTasks || 0
           },
           systemStatus: {
             cpuUsage: 23.7,
@@ -82,59 +84,19 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
             temperature: '67°C',
             diskUsage: '0.8TB'
           },
-          tags: ['customer-service', 'quality-assessment', 'production']
+          tags: ['medical-qa', 'quality-assessment', 'production']
         };
         
         setEvaluation(formattedEvaluation);
-      } else {
-        // 🔥 FIXED: If evaluation not found in API, create mock data immediately
-        console.log(`Evaluation "${decodedName}" not found in API data. Creating mock data.`);
-        const mockEvaluation = {
-          id: 'mock_eval_001',
-          name: decodedName,
-          description: 'Mock evaluation for demonstration',
-          status: 'running',
-          progress: Math.floor(Math.random() * 100),
-          currentStage: 'Evaluation',
-          model: 'Claude-3 Sonnet',
-          modelVersion: 'claude-3-sonnet-20240229',
-          dataset: 'Custom Dataset',
-          datasetSize: '1,500 samples',
-          owner: 'user@example.com',
-          created: new Date().toLocaleDateString(),
-          stages: [
-            { name: 'Dataset Loading', status: 'completed', description: 'Loading and validating evaluation data' },
-            { name: 'Model Setup', status: 'completed', description: 'Initializing model and configuration' },
-            { name: 'Evaluation', status: 'running', description: 'Running evaluation tasks and collecting metrics' },
-            { name: 'Analysis', status: 'pending', description: 'Analyzing results and generating reports' }
-          ],
-          metrics: {
-            answerRelevance: 0.924,
-            coherence: 0.887,
-            helpfulness: 0.913,
-            accuracy: 0.896,
-            currentTask: 750,
-            totalTasks: 1500
-          },
-          systemStatus: {
-            cpuUsage: 23.7,
-            gpuUsage: 78.4,
-            ramUsage: '12.3GB',
-            vramUsage: '18.2GB',
-            temperature: '67°C',
-            diskUsage: '0.8TB'
-          },
-          tags: ['demo', 'mock', 'evaluation']
-        };
-        
-        setEvaluation(mockEvaluation);
+        hasFetchedRef.current = true; // Mark as fetched
       }
-    } else if (!loading) {
-      // 🔥 FIXED: If no evaluations loaded yet, create mock data
+    } else if (!loading && !hasFetchedRef.current) {
+      // 🔥 FIX: Only call once and mark as attempted
       console.log('No evaluations loaded from API yet. Creating mock data.');
+      hasFetchedRef.current = true;
       fetchEvaluationData(evaluationName);
     }
-  }, [evaluationRuns, evaluationName, loading, fetchEvaluationData]);
+  }, [evaluationRuns, evaluationName, loading]); // 🔥 REMOVED fetchEvaluationData from deps
 
   const handleBack = () => {
     if (onBack) {
@@ -152,8 +114,8 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
     setEvaluation(prev => prev ? { ...prev, ...data } : null);
   };
 
-  // 🔥 IMPROVED LOADING STATE
-  if (loading || (!evaluation && evaluationRuns.length === 0)) {
+  // 🔥 IMPROVED LOADING STATE with timeout
+  if (loading || (!evaluation && !hasFetchedRef.current)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <ThemeToggle />
@@ -161,13 +123,26 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
           <Loader2 className="animate-spin h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Loading evaluation details...</p>
           <p className="text-sm text-gray-500 mt-2">Searching for: {decodeURIComponent(evaluationName)}</p>
+          
+          {/* 🔥 ADD: Loading timeout warning */}
+          <div className="mt-4">
+            <button
+              onClick={() => {
+                hasFetchedRef.current = false;
+                refreshData();
+              }}
+              className="text-blue-600 hover:text-blue-700 text-sm underline"
+            >
+              Taking too long? Click to retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   // 🔥 IMPROVED ERROR STATE
-  if (error || (!evaluation && !loading)) {
+  if (error || (!evaluation && hasFetchedRef.current)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <ThemeToggle />
@@ -192,7 +167,10 @@ export const EvaluationStatusScreen: React.FC<EvaluationStatusScreenProps> = ({
               Back to Dashboard
             </button>
             <button
-              onClick={refreshData}
+              onClick={() => {
+                hasFetchedRef.current = false;
+                refreshData();
+              }}
               className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Refresh Data

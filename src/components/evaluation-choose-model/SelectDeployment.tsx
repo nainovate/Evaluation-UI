@@ -116,11 +116,11 @@ export default function SelectDeployment({
             <div className="flex items-center space-x-2">
               <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                {selectedDeployments.length} model{selectedDeployments.length !== 1 ? 's' : ''} selected
+                {selectedDeployments.length} Inference{selectedDeployments.length !== 1 ? 's' : ''} selected
               </span>
             </div>
             <div className="text-xs text-blue-600 dark:text-blue-400">
-              Click on models to add/remove them
+              Click on inferences to add/remove them
             </div>
           </div>
         </div>

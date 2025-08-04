@@ -9,7 +9,7 @@ const STEP_MAPPING = {
     component: 'DatasetSelectionStep',
     icon: Database
   },
-  'Select Model': {
+  'Select Inference': {
     key: 'model',
     component: 'ModelSelectionStep',
     icon: Cpu
