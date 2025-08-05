@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SelectDeployment,
   DeploymentFilters,
@@ -25,7 +25,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('All Providers');
   const [selectedStatus, setSelectedStatus] = useState('All Status');
-  // REMOVED: const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(null); // NEW: Initialize selectedModel state
 
   const {
     deployments,
@@ -40,24 +40,71 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
 
   const filteredDeployments = getFilteredDeployments(searchTerm, selectedProvider, selectedStatus);
 
-  const handleNext = async () => {
-    if (selectedDeployments.length > 0) {
-      onComplete({
-        deployments: selectedDeployments.map(deployment => ({
-          id: deployment.id,
-          name: deployment.name,
-          model: deployment.model,
-          provider: deployment.provider
-        }))
-      });
-    }
-  };
+  // ✅ UPDATE the handleNext function to pass deployments array:
+const handleNext = async () => {
+  if (selectedDeployments.length > 0) {
+    onComplete({
+      deployments: selectedDeployments.map(deployment => ({
+        id: deployment.id,
+        name: deployment.name,
+        model: deployment.model || deployment.name,
+        provider: deployment.provider || 'Unknown'
+      }))
+    });
+  }
+};
 
   // UPDATED: Disabled Add Deployment handler
   const handleAddDeployment = () => {
     // TODO: Navigate to add deployment page later
     console.log('Add Deployment functionality will be integrated later');
   };
+
+  // ✅ ADD this useEffect after your existing hooks  
+// ✅ ADD this useEffect after your existing hooks
+useEffect(() => {
+  console.log('🔍 MODEL COMPONENT INITIALIZATION DEBUG:');
+  console.log('  - loading:', loading);
+  console.log('  - deployments.length:', deployments.length);
+  console.log('  - metadata?.deployment:', metadata?.deployment);
+  console.log('  - metadata?.deployments:', metadata?.deployments);
+  console.log('  - selectedDeployments.length:', selectedDeployments.length);
+
+  // Wait for deployments to be loaded
+  if (loading) {
+    console.log('  → Deployments still loading, waiting...');
+    return;
+  }
+
+  // Initialize from persisted metadata when deployments are ready
+  if (deployments.length > 0 && selectedDeployments.length === 0) {
+    // Handle single deployment (legacy)
+    if (metadata?.deployment && metadata.deployment.id) {
+      console.log('  → Initializing single deployment from metadata:', metadata.deployment.id);
+      
+      const persistedDeployment = deployments.find(d => d.id === metadata.deployment.id);
+      if (persistedDeployment) {
+        console.log('  → ✅ Found persisted deployment, selecting:', persistedDeployment.name);
+        handleDeploymentSelect(persistedDeployment);
+      } else {
+        console.log('  → ❌ Persisted deployment NOT found!');
+      }
+    }
+    
+    // Handle multiple deployments (new format)
+    if (metadata?.deployments && Array.isArray(metadata.deployments) && metadata.deployments.length > 0) {
+      console.log('  → Initializing multiple deployments from metadata:', metadata.deployments.length);
+      
+      metadata.deployments.forEach(deploymentData => {
+        const persistedDeployment = deployments.find(d => d.id === deploymentData.id);
+        if (persistedDeployment) {
+          console.log('  → ✅ Found persisted deployment, selecting:', persistedDeployment.name);
+          handleDeploymentSelect(persistedDeployment);
+        }
+      });
+    }
+  }
+}, [metadata?.deployment, metadata?.deployments, deployments, selectedDeployments, handleDeploymentSelect, loading]);
 
   return (
     <div className="space-y-6">

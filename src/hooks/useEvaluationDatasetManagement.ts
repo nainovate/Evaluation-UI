@@ -9,7 +9,7 @@ import {
 
 export function useEvaluationDatasetManagement() {
   const [datasets, setDatasets] = useState<EvaluationDataset[]>([]);
-  const [selectedDataset, setSelectedDataset] = useState<EvaluationDataset | null>(null);
+  const [selectedDataset, setSelectedDataset] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,49 +38,16 @@ export function useEvaluationDatasetManagement() {
     loadInitialDatasets();
   }, []);
 
-  // Load selected dataset from metadata
-  useEffect(() => {
-    const loadSelectedDataset = async () => {
-      try {
-        const metadata = await getEvaluationMetadata();
-        if (metadata.dataset?.id) {
-          const dataset = datasets.find(d => d.id === metadata.dataset.id);
-          if (dataset) {
-            setSelectedDataset(dataset);
-          }
-        }
-      } catch (err) {
-        console.error('Error loading selected dataset:', err);
-      }
-    };
-    
-    if (datasets.length > 0) {
-      loadSelectedDataset();
-    }
-  }, [datasets]);
+  
 
+ // ✅ REPLACE the handleDatasetSelect function with this simplified version:
   const handleDatasetSelect = async (datasetId: string) => {
     const dataset = datasets.find(d => d.id === datasetId);
     if (dataset) {
-      setSelectedDataset(dataset);
-      
-      try {
-        await updateEvaluationMetadata({
-          dataset: {
-            uid: dataset.uid || dataset.id,
-            id: dataset.id,
-            name: dataset.name,
-            selectedAt: new Date().toISOString(),
-            taskType: dataset.taskType,
-            rows: dataset.rows,
-            columns: dataset.columns
-          },
-          selectedDataset: dataset
-        });
-        console.log('Dataset selection saved to metadata:', dataset.uid || dataset.id);
-      } catch (error) {
-        console.error('Failed to update metadata with dataset selection:', error);
-      }
+      setSelectedDataset(datasetId);
+      console.log('Dataset selected (component state only):', dataset.name);
+      // ❌ REMOVE: Don't call updateEvaluationMetadata here anymore
+      // The main page will handle persistence via onComplete()
     }
   };
 
@@ -104,15 +71,9 @@ export function useEvaluationDatasetManagement() {
 
   const handleDatasetUpdate = async (datasetId: string, updates: Partial<EvaluationDataset>): Promise<boolean> => {
     try {
-      // For now, just update local state since we don't have a real update API
       setDatasets(prev => prev.map(d => 
         d.id === datasetId ? { ...d, ...updates } : d
       ));
-      
-      // Update selected dataset if it's the one being updated
-      if (selectedDataset?.id === datasetId) {
-        setSelectedDataset(prev => prev ? { ...prev, ...updates } : null);
-      }
       
       console.log('Dataset updated successfully');
       return true;
@@ -125,24 +86,11 @@ export function useEvaluationDatasetManagement() {
 
   const handleDatasetDelete = async (datasetId: string): Promise<boolean> => {
     try {
-      // For now, just remove from local state since we don't have a real delete API
       setDatasets(prev => prev.filter(d => d.id !== datasetId));
       
       // Clear selected dataset if it's the one being deleted
-      if (selectedDataset?.id === datasetId) {
+      if (selectedDataset === datasetId) {
         setSelectedDataset(null);
-        await updateEvaluationMetadata({
-          dataset: {
-            uid: null,
-            id: null,
-            name: null,
-            selectedAt: null,
-            taskType: null,
-            rows: null,
-            columns: null
-          },
-          selectedDataset: undefined
-        });
       }
       
       console.log('Dataset deleted successfully');
@@ -153,9 +101,9 @@ export function useEvaluationDatasetManagement() {
       return false;
     }
   };
-
   const getSelectedDatasetData = () => {
-    return selectedDataset;
+    if (!selectedDataset) return null;
+    return datasets.find(d => d.id === selectedDataset) || null;
   };
 
   // 🔥 NEW: Refresh datasets from API

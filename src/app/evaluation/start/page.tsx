@@ -1,12 +1,10 @@
-// src/app/evaluation/start/page.tsx - Updated to use clean config
+// src/app/evaluation/start/page.tsx - Updated state management only
 
 'use client'
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../../../components/ThemeToggle';
-// Remove useToast import if not used anymore
-// import { useToast } from '../../../hooks/useToast';
 import { ToastContainer } from '../../../components/common/ToastNotification';
 
 import type { EvaluationMetadata } from '../../../utils/evaluationUtils';
@@ -28,6 +26,9 @@ import { ModelSelectionStep } from '../../../components/evaluation-flow/ModelSel
 import { MetricsConfigurationStep } from '../../../components/evaluation-flow/MetricsConfigurationStep';
 import { ReviewAndRunStep } from '../../../components/evaluation-flow/ReviewAndRunStep';
 import { Success } from '../../../components/evaluation-flow/success';
+
+// ✅ Import the new persistent state hook
+import { usePersistedEvaluationState } from '../../../hooks/usePersistedEvaluationState';
 
 // 🔹 COMPONENT MAPPING
 const STEP_COMPONENTS = {
@@ -52,106 +53,100 @@ export default function EvaluationStartPage() {
   };
   // ----- End toast notifications state -----
 
-  // ----- STATE MANAGEMENT -----
-  const [currentStep, setCurrentStep] = useState(1);
-  const [metadata, setMetadata] = useState<EvaluationMetadata | null>(null);
-  const [loading, setLoading] = useState(true);
+  // ----- ✅ UPDATED STATE MANAGEMENT - Using persistent state hook -----
+  const {
+    currentStep,
+    setCurrentStep,
+    metadata,
+    setMetadata,
+    clearPersistedState,
+    markEvaluationCompleted,
+    isHydrated // <-- Add this line to destructure isHydrated
+  } = usePersistedEvaluationState();
+
+  const [loading, setLoading] = useState(false); // Changed to false since we load from localStorage
   const [error, setError] = useState<string | null>(null);
   const [flowNavigator] = useState(() => new FlowNavigator());
 
-  // 🔸 LOAD EVALUATION METADATA
-  useEffect(() => {
-    const loadMetadata = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Initialize fresh metadata
-        const freshMetadata: EvaluationMetadata = {
-          id: `eval_${Date.now()}`,
-          name: '',
-          description: '',
-          status: 'created',
-          createdAt: new Date().toISOString(),
-          dataset: null,
-          deployment: null,
-          metrics: {
-            categories: [],
-            selectedCategory: null,
-            totalSelected: 0,
-            configuration: null,
-            results: null
-          }
-        };
-        
-        setMetadata(freshMetadata);
-        setCurrentStep(1); // Always start from step 1
-      } catch (err) {
-        console.error('Error initializing evaluation:', err);
-        setError('Failed to initialize evaluation');
-      } finally {
-        setLoading(false);
+  // ✅ MODIFIED: Initialize metadata only if it doesn't exist
+  // ✅ REPLACE with this simple initialization
+// ✅ REPLACE the initialization useEffect with this:
+useEffect(() => {
+  // Wait for the persistent hook to be hydrated and attempt to load data
+  if (!isHydrated) {
+    console.log('🔍 MAIN PAGE: Waiting for hydration...');
+    return;
+  }
+
+  // Only initialize if metadata is still null after hydration
+  if (!metadata) {
+    console.log('🔍 MAIN PAGE: No persisted data found, initializing fresh metadata');
+    const freshMetadata: EvaluationMetadata = {
+      id: `eval_${Date.now()}`,
+      name: '',
+      description: '',
+      status: 'created',
+      createdAt: new Date().toISOString(),
+      dataset: {
+        uid: null,
+        id: null,
+        name: null,
+        selectedAt: null,
+        taskType: null,
+        rows: null,
+        columns: null
+      },
+      deployment: undefined,
+      metrics: {
+        categories: [],
+        selectedCategory: null,
+        totalSelected: 0,
+        configuration: null,
+        results: null
       }
     };
-
-    loadMetadata();
-  }, []);
-
+    setMetadata(freshMetadata);
+  } else {
+    console.log('🔍 MAIN PAGE: Using persisted metadata with dataset:', metadata.dataset?.name);
+  }
+}, [metadata, setMetadata, isHydrated]); // ← Added isHydrated dependency
   // 🔸 HANDLE STEP COMPLETION
   const handleStepComplete = async (stepKey: string, data: any) => {
     try {
       setLoading(true);
       
-      // Update metadata in memory only - no persistence
-      const updatedMetadata = { ...metadata };
+      // Update metadata with step data
+      const updatedMetadata = { ...metadata, [stepKey]: data } as EvaluationMetadata;
       
-      switch (stepKey) {
-        case 'dataset':
-          updatedMetadata.dataset = {
-            uid: data.uid,
-            id: data.id,
-            name: data.name,
-            selectedAt: new Date().toISOString(),
-            taskType: data.taskType,
-            rows: data.rows,
-            columns: data.columns
-          };
-          addToast('Dataset selected successfully', 'success');
-          break;
-          
-        case 'model':
-          updatedMetadata.deployment = {
-            id: data.id,
-            name: data.name,
-            model: data.model,
-            provider: data.provider,
-            selectedAt: new Date().toISOString()
-          };
-          addToast('Model deployment selected successfully', 'success');
-          break;
-          
-        case 'metrics':
-          updatedMetadata.metrics = {
-            categories: data.categories,
-            selectedCategory: data.selectedCategory,
-            totalSelected: data.totalSelected,
-            configuration: data.configuration,
-            results: null
-          };
-          addToast('Metrics configuration saved successfully', 'success');
-          break;
-          
-        case 'review':
-          updatedMetadata.name = data.name;
-          updatedMetadata.description = data.description;
-          updatedMetadata.status = 'running';
-          addToast('Evaluation started successfully', 'success');
-          break;
+      if (stepKey === 'model') {
+        // Store both single deployment (legacy) and multiple deployments (new)
+        const firstDeployment = data.deployments?.[0];
+        
+        updatedMetadata.deployment = firstDeployment
+          ? {
+              id: firstDeployment.id,
+              name: firstDeployment.name,
+              model: firstDeployment.model || firstDeployment.name,
+              provider: firstDeployment.provider || 'Unknown',
+              selectedAt: new Date().toISOString()
+            }
+          : null;
+        
+        updatedMetadata.deployments = data.deployments?.map(d => ({
+          id: d.id,
+          name: d.name,
+          model: d.model || d.name,
+          provider: d.provider || 'Unknown',
+          selectedAt: new Date().toISOString()
+        })) || [];
+        
+        addToast('Model deployment selected successfully', 'success');
+        // break; -> not needed outside a switch or loop
       }
       
       setMetadata(updatedMetadata);
       
-      // Move to next step using flow navigator
+      // Move to next step
       const nextStepId = flowNavigator.getNextStepId(currentStep);
       if (nextStepId) {
         setCurrentStep(nextStepId);
@@ -182,6 +177,10 @@ export default function EvaluationStartPage() {
 
   // 🔸 RENDER CURRENT STEP
   const renderCurrentStep = () => {
+  console.log('🔍 MAIN PAGE RENDER DEBUG:');
+  console.log('  - currentStep:', currentStep);
+  console.log('  - metadata:', metadata);
+  console.log('  - metadata?.dataset:', metadata?.dataset);
     if (!metadata) return null;
     
     const currentStepConfig = flowNavigator.getStepById(currentStep);

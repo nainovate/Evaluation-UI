@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   MetricsSelection,
   ConfigurationSettings,
@@ -23,6 +23,7 @@ export const MetricsConfigurationStep: React.FC<MetricsConfigurationStepProps> =
   const {
     metricCategories,
     selectedMetrics,
+    setSelectedMetrics, // NEW: added setter for selectedMetrics
     evaluationModel,
     batchSize,
     timeout,
@@ -34,10 +35,37 @@ export const MetricsConfigurationStep: React.FC<MetricsConfigurationStepProps> =
     handleBatchSizeChange,
     handleTimeoutChange,
     getTotalSelectedMetrics,
+    restoreFromMetadata,
     getSelectedCategory,
     saveConfiguration
   } = useEvaluationMetricsManagement();
 
+ 
+
+useEffect(() => {
+  console.log('🔍 METRICS COMPONENT INITIALIZATION DEBUG:');
+  console.log('  - loading:', loading);
+  console.log('  - metricCategories.length:', metricCategories.length);
+  console.log('  - metadata?.metrics:', metadata?.metrics);
+  console.log('  - selectedMetrics.length:', selectedMetrics.length);
+  console.log('  - metricCategories:', metricCategories);
+  console.log('  - metricCategories.length:', metricCategories.length);
+  console.log('  - selectedMetrics.length:', selectedMetrics.length);
+  console.log('  - error:', error);
+  console.log('  - metadata?.metrics:', metadata?.metrics);
+
+  // Wait for metrics to be loaded
+  if (loading) {
+    console.log('  → Metrics still loading, waiting...');
+    return;
+  }
+
+  // Initialize from persisted metadata when metrics are ready
+  if (metadata?.metrics && metricCategories.length > 0 && selectedMetrics.length === 0) {
+    console.log('  → Calling restoreFromMetadata');
+    restoreFromMetadata(metadata.metrics);
+  }
+}, [metadata?.metrics, metricCategories, selectedMetrics, loading, restoreFromMetadata]);
   const handleNext = async () => {
     const selectedCategory = getSelectedCategory();
     const totalMetrics = getTotalSelectedMetrics();

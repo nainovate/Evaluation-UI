@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileUploadSection,
   ExistingDatasets,
@@ -101,6 +101,52 @@ export const DatasetSelectionStep: React.FC<DatasetSelectionStepProps> = ({
     'Conversational QA': ['multi-turn', 'context-aware', 'dialogue-qa', 'chat-evaluation'],
     'Retrieval': ['document-retrieval', 'passage-ranking', 'semantic-search', 'information-retrieval'],
   };
+
+  // ✅ ADD this useEffect after your existing hooks
+// ✅ ADD this useEffect after your existing hooks
+  // ✅ UPDATE this useEffect
+  // ✅ REPLACE the existing useEffect with this fixed version
+// ✅ REPLACE your useEffect with this debug version
+useEffect(() => {
+  console.log('🔍 COMPONENT INITIALIZATION DEBUG:');
+  console.log('  - datasetsLoading:', datasetsLoading);
+  console.log('  - datasets.length:', datasets.length);
+  console.log('  - metadata?.dataset:', metadata?.dataset);
+  console.log('  - selectedDataset:', selectedDataset);
+
+  // Wait for datasets to be loaded
+  if (datasetsLoading) {
+    console.log('  → Datasets still loading, waiting...');
+    return;
+  }
+
+  // Initialize from persisted metadata when datasets are ready
+  if (metadata?.dataset && metadata.dataset.id && !selectedDataset && datasets.length > 0) {
+    console.log('  → Attempting to initialize from metadata...');
+    console.log('  → Looking for dataset ID:', metadata.dataset.id);
+    console.log('  → Available dataset IDs:', datasets.map(d => d.id));
+    
+    const persistedDataset = datasets.find(d => d.id === metadata.dataset.id);
+    if (persistedDataset) {
+      console.log('  → ✅ Found persisted dataset, selecting:', persistedDataset.name);
+      handleDatasetSelect(metadata.dataset.id);
+    } else {
+      console.log('  → ❌ Persisted dataset NOT found!');
+    }
+    
+    if (metadata.dataset.taskType) {
+      console.log('  → Restoring taskType:', metadata.dataset.taskType);
+      setTaskType(metadata.dataset.taskType);
+    }
+  } else {
+    console.log('  → Skipping initialization because:');
+    console.log('    - metadata?.dataset exists:', !!metadata?.dataset);
+    console.log('    - metadata.dataset.id exists:', !!metadata?.dataset?.id);
+    console.log('    - selectedDataset is null:', !selectedDataset);
+    console.log('    - datasets.length > 0:', datasets.length > 0);
+  }
+}, [metadata?.dataset, datasets, selectedDataset, handleDatasetSelect, datasetsLoading]);
+//   ↑ Added datasetsLoading to dependencies
 
   const handleNext = async () => {
     const selectedDatasetData = getSelectedDatasetData();
