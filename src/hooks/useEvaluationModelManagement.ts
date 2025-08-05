@@ -14,7 +14,6 @@ export function useEvaluationModelManagement() {
 
   useEffect(() => {
     loadDeployments();
-    loadSelectedDeployments();
   }, []);
 
   // 🔥 CHANGED: Now uses API-based function instead of hardcoded data
@@ -36,111 +35,28 @@ export function useEvaluationModelManagement() {
     }
   };
 
-  // Load multiple selected deployments from metadata
-  const loadSelectedDeployments = async () => {
-    try {
-      const metadata = await getEvaluationMetadata();
-      
-      // Check for new multiple deployments format
-      if (metadata.deployments && Array.isArray(metadata.deployments) && metadata.deployments.length > 0) {
-        const deploymentList = await getEvaluationDeployments();
-        const selected = deploymentList.filter(d => 
-          metadata.deployments!.some((md: any) => md.id === d.id)
-        );
-        setSelectedDeployments(selected);
-      }
-      // Fallback: Check for legacy single deployment format for backward compatibility
-      else if (metadata.deployment && metadata.deployment.id) {
-        const deploymentList = await getEvaluationDeployments();
-        const deployment = deploymentList.find(d => d.id === metadata.deployment!.id);
-        if (deployment) {
-          setSelectedDeployments([deployment]); // Convert single to array
-        }
-      }
-    } catch (err) {
-      console.error('Error loading selected deployments:', err);
-    }
-  };
+  
 
   // Handle selecting a deployment (add to array)
+  // ✅ SIMPLIFY handleDeploymentSelect (remove metadata persistence):
   const handleDeploymentSelect = async (deployment: Deployment) => {
-    // Check if deployment is already selected
-    const isAlreadySelected = selectedDeployments.some(d => d.id === deployment.id);
-    if (isAlreadySelected) {
-      return; // Don't add duplicates
-    }
+  const isAlreadySelected = selectedDeployments.some(d => d.id === deployment.id);
+  if (isAlreadySelected) {
+    return;
+  }
 
-    const newSelected = [...selectedDeployments, deployment];
-    setSelectedDeployments(newSelected);
-    
-    // Update metadata with multiple deployments
-    try {
-      await updateEvaluationMetadata({
-        deployments: newSelected.map(d => ({
-          id: d.id,
-          name: d.name,
-          model: d.model || d.name,
-          provider: d.provider || 'Unknown',
-          selectedAt: new Date().toISOString()
-        })),
-        // Keep legacy single deployment for backward compatibility
-        deployment: {
-          id: newSelected[0].id,
-          name: newSelected[0].name,
-          model: newSelected[0].model || newSelected[0].name,
-          provider: newSelected[0].provider || 'Unknown',
-          selectedAt: new Date().toISOString()
-        }
-      });
-      
-      console.log('Deployment selection updated:', deployment.name);
-    } catch (err) {
-      console.error('Error updating deployment selection:', err);
-      // Revert on error
-      setSelectedDeployments(selectedDeployments);
-    }
-  };
-
+  const newSelected = [...selectedDeployments, deployment];
+  setSelectedDeployments(newSelected);
+  console.log('Deployment selected (component state only):', deployment.name);
+  // ❌ REMOVED: Don't call updateEvaluationMetadata here
+};
   // Handle deselecting a deployment (remove from array)
   const handleDeploymentDeselect = async (deployment: Deployment) => {
-    const newSelected = selectedDeployments.filter(d => d.id !== deployment.id);
-    setSelectedDeployments(newSelected);
-    
-    // Update metadata
-    try {
-      const updateData: any = {
-        deployments: newSelected.map(d => ({
-          id: d.id,
-          name: d.name,
-          model: d.model || d.name,
-          provider: d.provider || 'Unknown',
-          selectedAt: new Date().toISOString()
-        }))
-      };
-
-      // Update legacy single deployment field
-      if (newSelected.length > 0) {
-        updateData.deployment = {
-          id: newSelected[0].id,
-          name: newSelected[0].name,
-          model: newSelected[0].model || newSelected[0].name,
-          provider: newSelected[0].provider || 'Unknown',
-          selectedAt: new Date().toISOString()
-        };
-      } else {
-        // Clear legacy deployment if no selections
-        updateData.deployment = null;
-      }
-
-      await updateEvaluationMetadata(updateData);
-      console.log('Deployment deselection updated');
-    } catch (err) {
-      console.error('Error updating deployment selection:', err);
-      // Revert on error
-      setSelectedDeployments([...selectedDeployments, deployment]);
-    }
-  };
-
+  const newSelected = selectedDeployments.filter(d => d.id !== deployment.id);
+  setSelectedDeployments(newSelected);
+  console.log('Deployment deselected (component state only):', deployment.name);
+  // ❌ REMOVED: Don't call updateEvaluationMetadata here
+};
   // Clear all selected deployments
   const handleClearAllDeployments = async () => {
     try {

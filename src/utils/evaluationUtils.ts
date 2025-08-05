@@ -240,60 +240,55 @@ export async function getDashboardStats() {
   }
 }
 
-// Evaluation metadata management - LOCAL STATE (No API needed)
-let localMetadata: EvaluationMetadata = {
-  evaluationSession: {
-    id: null,
-    createdAt: null,
-    lastModified: null,
-    status: 'new'
-  },
-  dataset: {
-    uid: null,
-    id: null,
-    name: null,
-    selectedAt: null,
-    taskType: null,
-    rows: null,
-    columns: null
-  },
-  deployment: {
-    id: null,
-    name: null,
-    model: null,
-    provider: null,
-    selectedAt: null
-  },
-  deployments: [],
-  metrics: {
-    categories: [],
-    selectedCategory: null,
-    totalSelected: 0,
-    configuration: {
-      evaluationModel: 'gpt-4-turbo',
-      batchSize: 10,
-      timeout: 30
-    },
-    configuredAt: null
-  },
-  execution: {
-    startedAt: null,
-    completedAt: null,
-    status: null,
-    results: null,
-    evaluationName: null,
-    evaluationDescription: null
-  }
-};
-
 export async function getEvaluationMetadata(): Promise<EvaluationMetadata> {
-  console.log('Getting local evaluation metadata');
-  return localMetadata;
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('evaluation_metadata');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        console.log('Loading metadata from localStorage:', parsed);
+        return parsed;
+      }
+    } catch (error) {
+      console.warn('Failed to load metadata from localStorage:', error);
+    }
+  }
+   return {
+    id: `eval_${Date.now()}`,
+    name: '',
+    description: '',
+    status: 'created',
+    createdAt: new Date().toISOString(),
+    dataset: null,
+    deployment: null,
+    metrics: {
+      categories: [],
+      selectedCategory: null,
+      totalSelected: 0,
+      configuration: null,
+      results: null
+    }
+  };
 }
 
 export async function updateEvaluationMetadata(updates: Partial<EvaluationMetadata>): Promise<void> {
-  console.log('Updating local metadata:', updates);
-  localMetadata = { ...localMetadata, ...updates };
+  if (typeof window !== 'undefined') {
+    try {
+      // Get current metadata from localStorage
+      const current = await getEvaluationMetadata();
+      
+      // Merge updates
+      const updated = { ...current, ...updates };
+      
+      // Save back to localStorage
+      localStorage.setItem('evaluation_metadata', JSON.stringify(updated));
+      localStorage.setItem('evaluation_timestamp', Date.now().toString());
+      
+      console.log('Updated metadata in localStorage:', updates);
+    } catch (error) {
+      console.warn('Failed to update metadata in localStorage:', error);
+    }
+  }
 }
 
 // Utility functions for generating IDs

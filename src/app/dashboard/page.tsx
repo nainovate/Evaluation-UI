@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BaseLayout } from '../../components/layouts/BaseLayout'
-
+// ✅ ADD this import with your existing imports
+import { usePersistedEvaluationState } from '../../hooks/usePersistedEvaluationState'
 export default function NainovateDashboard() {
   const router = useRouter()
   const [currentJobIndex, setCurrentJobIndex] = useState(0)
@@ -17,7 +18,8 @@ export default function NainovateDashboard() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
+// ✅ ADD this line after your existing useState declarations
+  const { clearPersistedState } = usePersistedEvaluationState()
   // Load data on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -64,9 +66,19 @@ export default function NainovateDashboard() {
 
     loadData()
   }, [])
-
+  // ✅ ADD this useEffect after your existing useEffect blocks
+  useEffect(() => {
+    // Clear any evaluation data when entering dashboard
+    clearPersistedState('entered_dashboard')
+  }, [clearPersistedState])
   const handleCreateNewEvaluation = () => {
+     // Clear any existing evaluation data before starting new one
+  clearPersistedState('start_new_evaluation_from_dashboard')
+  
+  // Small delay to ensure localStorage is cleared
+  setTimeout(() => {
     router.push('/evaluation/start')
+  }, 50)
   }
 
   const handleViewEvaluationDetails = (evaluationName: string) => {

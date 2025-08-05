@@ -1,12 +1,38 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Database, Zap, Activity, Moon, Sun } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
 export default function EvaluationStartPage() {
   const router = useRouter()
+  // ✅ ADD: Clear localStorage when landing page loads
+  useEffect(() => {
+    // Clear all evaluation-related localStorage data when user visits landing page
+    const clearEvaluationData = () => {
+      if (typeof window !== 'undefined') {
+        try {
+          console.log('🏠 Landing page: Clearing all evaluation data for fresh start');
+          
+          // Clear all evaluation-related localStorage keys
+          localStorage.removeItem('evaluation_current_step');
+          localStorage.removeItem('evaluation_metadata');
+          localStorage.removeItem('evaluation_timestamp');
+          localStorage.removeItem('evaluationMetrics');
+          
+          // Optional: Clear completed evaluations history too
+          // localStorage.removeItem('completed_evaluations');
+          
+          console.log('✅ All evaluation data cleared from landing page');
+        } catch (error) {
+          console.warn('Failed to clear evaluation data:', error);
+        }
+      }
+    };
+
+    clearEvaluationData();
+  }, []); // Run once when landing page loads
 
   const handleStartEvaluation = () => {
     router.push('/evaluation/start')

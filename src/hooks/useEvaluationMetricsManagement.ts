@@ -114,42 +114,31 @@ export const useEvaluationMetricsManagement = () => {
   const [timeout, setTimeout] = useState(30);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Load existing configuration on mount (simplified)
+  // ✅ ADD this useEffect to ensure categories are always loaded
+useEffect(() => {
+  // Initialize with default categories if we don't have any
+  if (metricCategories.length === 0) {
+    console.log('🔄 Initializing with default categories');
+    setMetricCategories(defaultCategories);
+  }
+}, []);
   useEffect(() => {
-    const loadConfiguration = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Try to load from localStorage
-        if (typeof window !== 'undefined') {
-          const stored = localStorage.getItem('evaluationMetrics');
-          if (stored) {
-            const data = JSON.parse(stored);
-            if (data.categories) {
-              setMetricCategories(data.categories);
-              setSelectedMetrics(data.categories.filter((cat: MetricCategory) => cat.selected));
-            }
-            if (data.configuration) {
-              setEvaluationModel(data.configuration.evaluationModel || 'gpt-4');
-              setBatchSize(data.configuration.batchSize || 50);
-              setTimeout(data.configuration.timeout || 30);
-            }
-          }
-        }
-        
-      } catch (err) {
-        console.error('Error loading metrics configuration:', err);
-        // Don't set error state, just use defaults
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadConfiguration();
-  }, []);
-
+    console.log('🔍 METRICS HOOK DEBUG:');
+    console.log('  - defaultCategories.length:', defaultCategories.length);
+    console.log('  - metricCategories.length:', metricCategories.length);
+    console.log('  - metricCategories:', metricCategories);
+    console.log('  - loading:', loading);
+    console.log('  - error:', error);
+  }, [metricCategories, loading, error]);
+  const resetToDefaults = useCallback(() => {
+  console.log('🔄 Resetting metrics to defaults');
+  setMetricCategories(defaultCategories);
+  setSelectedMetrics([]);
+  setEvaluationModel('gpt-4');
+  setBatchSize(50);
+  setTimeout(30);
+  setError(null);
+}, []);
   const handleCategoryToggle = useCallback((categoryId: string) => {
     setMetricCategories(prev => {
       const newCategories = prev.map(category => ({
@@ -215,53 +204,85 @@ export const useEvaluationMetricsManagement = () => {
     })));
     setSelectedMetrics([]);
   }, []);
-
-  const saveConfiguration = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // ✅ REPLACE the restoreFromMetadata function with this safe version
+const restoreFromMetadata = useCallback((savedMetrics: any) => {
+  console.log('🔄 Restoring metrics from metadata:', savedMetrics);
+  
+  try {
+    // ✅ ONLY restore if there are actual categories with data
+    if (savedMetrics?.categories && savedMetrics.categories.length > 0) {
+      // Check if categories have actual selection data
+      const hasSelections = savedMetrics.categories.some((cat: any) => 
+        cat.selected || (cat.subMetrics && cat.subMetrics.some((sm: any) => sm.enabled))
+      );
       
-      const selectedCategory = getSelectedCategory();
-      if (!selectedCategory) {
-        throw new Error('No category selected');
+      if (hasSelections) {
+        console.log('  → Found valid category data, restoring...');
+        setMetricCategories(savedMetrics.categories);
+        setSelectedMetrics(savedMetrics.categories.filter((cat: any) => cat.selected));
+      } else {
+        console.log('  → Categories exist but no selections found, keeping defaults');
       }
-
-      const configData = {
-        categories: metricCategories,
-        selectedCategory: selectedCategory.id,
-        totalSelected: getTotalSelectedMetrics(),
-        configuration: {
-          evaluationModel,
-          batchSize,
-          timeout
-        },
-        configuredAt: new Date().toISOString()
-      };
-
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('evaluationMetrics', JSON.stringify(configData));
-      }
-
-      // Also try to update main metadata
-      try {
-        await updateEvaluationMetadata({
-          metrics: configData
-        });
-      } catch (metadataError) {
-        console.log('Could not update main metadata, but local config saved');
-      }
-
-      console.log('✅ Metrics configuration saved successfully');
-    } catch (err) {
-      console.error('❌ Error saving metrics configuration:', err);
-      setError('Failed to save configuration');
-      throw err;
-    } finally {
-      setLoading(false);
+    } else {
+      console.log('  → No categories in metadata, keeping default categories');
     }
-  }, [metricCategories, evaluationModel, batchSize, timeout, getTotalSelectedMetrics, getSelectedCategory]);
+    
+    // Restore configuration settings (always safe to restore)
+    if (savedMetrics?.configuration) {
+      console.log('  → Restoring configuration settings');
+      if (savedMetrics.configuration.evaluationModel) {
+        setEvaluationModel(savedMetrics.configuration.evaluationModel);
+      }
+      if (savedMetrics.configuration.batchSize) {
+        setBatchSize(savedMetrics.configuration.batchSize);
+      }
+      if (savedMetrics.configuration.timeout) {
+        setTimeout(savedMetrics.configuration.timeout);
+      }
+    }
+    
+    console.log('✅ Metrics restored successfully');
+  } catch (error) {
+    console.error('❌ Error restoring metrics:', error);
+    // Keep existing categories on error
+  }
+}, []);
+  const saveConfiguration = useCallback(async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const selectedCategory = getSelectedCategory();
+    if (!selectedCategory) {
+      throw new Error('No category selected');
+    }
+    try {
+      await updateEvaluationMetadata({
+        metrics: {
+          categories: metricCategories,
+          selectedCategory: selectedCategory.id,
+          totalSelected: getTotalSelectedMetrics(),
+          configuration: {
+            evaluationModel,
+            batchSize,
+            timeout
+          },
+          configuredAt: new Date().toISOString()
+        }
+      });
+    } catch (metadataError) {
+      console.log('Could not update main metadata, but local config will be handled by main system');
+    }
 
+    console.log('✅ Metrics configuration ready for main system');
+  } catch (err) {
+    console.error('❌ Error preparing metrics configuration:', err);
+    setError('Failed to save configuration');
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+}, [metricCategories, evaluationModel, batchSize, timeout, getTotalSelectedMetrics, getSelectedCategory]);
   return {
     metricCategories,
     selectedMetrics,
@@ -278,6 +299,8 @@ export const useEvaluationMetricsManagement = () => {
     getTotalSelectedMetrics,
     getSelectedCategory,
     resetMetrics,
+    restoreFromMetadata,
+    resetToDefaults,
     saveConfiguration
   };
 };

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, Home, Clock, CheckCircle, AlertCircle, Loader, PlayCircle, Database, Cpu, BarChart3, Calendar, Target, Zap, TrendingUp, Users, Activity, ArrowRight } from 'lucide-react';
 import { useEvaluationData } from '../../hooks/useEvaluationData';
-
+// ✅ Add imports for clearing functionality
+import { usePersistedEvaluationState } from '../../hooks/usePersistedEvaluationState';
+import { useNavigationClearance } from '../../hooks/useNavigationClearance';
 interface JobData {
   id: string;
   title: string;
@@ -86,6 +88,12 @@ export const Success: React.FC<SuccessProps> = ({
       cost: `$${((metadata?.dataset?.rows || 1500) * (metadata?.metrics?.totalSelected || 3) * 0.001).toFixed(2)}`
     }
   ]);
+  // ✅ Add clearing functionality - no UI changes
+  const { clearPersistedState, markEvaluationCompleted } = usePersistedEvaluationState();
+  const { clearOnNavigation } = useNavigationClearance({
+    clearFunction: clearPersistedState,
+    enableAutoClearing: false // We'll handle clearing manually for this component
+  });
 
   const [cardsVisible, setCardsVisible] = useState(false);
   const [checkmarkVisible, setCheckmarkVisible] = useState(false);
@@ -96,6 +104,34 @@ export const Success: React.FC<SuccessProps> = ({
     completed: 0,
     successRate: 0
   });
+  // ✅ Add completion marking and clearing logic
+  useEffect(() => {
+    // Mark evaluation as completed when Success component mounts
+    if (metadata) {
+      markEvaluationCompleted(metadata as any);
+    }
+
+    // Set up clearing when component unmounts (user navigates away)
+    return () => {
+      const currentPath = window.location.pathname;
+      // Clear if navigating away from evaluation flow
+      if (!currentPath.includes('/evaluation/')) {
+        clearPersistedState('success_page_unmount');
+      }
+    };
+  }, [metadata, markEvaluationCompleted, clearPersistedState]);
+
+  // Existing checkmark animation effect - unchanged
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCheckmarkVisible(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ✅ Enhanced navigation handlers with clearing
+  // (Removed duplicate handleViewProgress to fix redeclaration error)
 
   useEffect(() => {
     // Trigger checkmark animation first
