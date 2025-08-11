@@ -4,9 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Database, Zap, Activity, Moon, Sun } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { useAuth } from '../components/providers/AuthProvider'
+import { AUTH_CONFIG } from '../lib/auth-config'
 
 export default function EvaluationStartPage() {
   const router = useRouter()
+  const { isAuthenticated, user } = useAuth()
   // ✅ ADD: Clear localStorage when landing page loads
   useEffect(() => {
     // Clear all evaluation-related localStorage data when user visits landing page
@@ -35,8 +38,13 @@ export default function EvaluationStartPage() {
   }, []); // Run once when landing page loads
 
   const handleStartEvaluation = () => {
-    router.push('/evaluation/start')
+    if (AUTH_CONFIG.ENABLED && !isAuthenticated) {
+      router.push(`${AUTH_CONFIG.LOGIN_PAGE}?redirect=/evaluation/start`)
+    } else {
+      router.push('/evaluation/start')
+    }
   }
+
 
   const handleViewDashboard = () => {
     router.push('/dashboard')

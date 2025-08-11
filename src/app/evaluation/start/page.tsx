@@ -1,4 +1,4 @@
-// src/app/evaluation/start/page.tsx - Updated state management only
+// src/app/evaluation/start/page.tsx - Complete page with auth integration
 
 'use client'
 
@@ -6,6 +6,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ThemeToggle } from '../../../components/ThemeToggle';
 import { ToastContainer } from '../../../components/common/ToastNotification';
+
+// ✅ Auth imports
+import { PrivateRoute } from '../../../components/auth/PrivateRoute';
+import { useAuth } from '../../../components/providers/AuthProvider';
 
 import type { EvaluationMetadata } from '../../../utils/evaluationUtils';
 
@@ -27,7 +31,7 @@ import { MetricsConfigurationStep } from '../../../components/evaluation-flow/Me
 import { ReviewAndRunStep } from '../../../components/evaluation-flow/ReviewAndRunStep';
 import { Success } from '../../../components/evaluation-flow/success';
 
-// ✅ Import the new persistent state hook
+// ✅ Import the persistent state hook
 import { usePersistedEvaluationState } from '../../../hooks/usePersistedEvaluationState';
 
 // 🔹 COMPONENT MAPPING
@@ -39,8 +43,12 @@ const STEP_COMPONENTS = {
   'Success': Success
 };
 
-export default function EvaluationStartPage() {
+// ✅ Main content component (all your existing logic)
+function EvaluationStartPageContent() {
   const router = useRouter();
+  
+  // ✅ Optional: Access user data
+  const { user } = useAuth();
   
   // ----- Toast notifications state -----
   const [toasts, setToasts] = useState([]);
@@ -53,7 +61,7 @@ export default function EvaluationStartPage() {
   };
   // ----- End toast notifications state -----
 
-  // ----- ✅ UPDATED STATE MANAGEMENT - Using persistent state hook -----
+  // ----- ✅ Your persistent state management -----
   const {
     currentStep,
     setCurrentStep,
@@ -61,55 +69,54 @@ export default function EvaluationStartPage() {
     setMetadata,
     clearPersistedState,
     markEvaluationCompleted,
-    isHydrated // <-- Add this line to destructure isHydrated
+    isHydrated
   } = usePersistedEvaluationState();
 
-  const [loading, setLoading] = useState(false); // Changed to false since we load from localStorage
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [flowNavigator] = useState(() => new FlowNavigator());
 
-  // ✅ MODIFIED: Initialize metadata only if it doesn't exist
-  // ✅ REPLACE with this simple initialization
-// ✅ REPLACE the initialization useEffect with this:
-useEffect(() => {
-  // Wait for the persistent hook to be hydrated and attempt to load data
-  if (!isHydrated) {
-    console.log('🔍 MAIN PAGE: Waiting for hydration...');
-    return;
-  }
+  // ✅ Your initialization logic
+  useEffect(() => {
+    // Wait for the persistent hook to be hydrated and attempt to load data
+    if (!isHydrated) {
+      console.log('🔍 MAIN PAGE: Waiting for hydration...');
+      return;
+    }
 
-  // Only initialize if metadata is still null after hydration
-  if (!metadata) {
-    console.log('🔍 MAIN PAGE: No persisted data found, initializing fresh metadata');
-    const freshMetadata: EvaluationMetadata = {
-      id: `eval_${Date.now()}`,
-      name: '',
-      description: '',
-      status: 'created',
-      createdAt: new Date().toISOString(),
-      dataset: {
-        uid: null,
-        id: null,
-        name: null,
-        selectedAt: null,
-        taskType: null,
-        rows: null,
-        columns: null
-      },
-      deployment: undefined,
-      metrics: {
-        categories: [],
-        selectedCategory: null,
-        totalSelected: 0,
-        configuration: null,
-        results: null
-      }
-    };
-    setMetadata(freshMetadata);
-  } else {
-    console.log('🔍 MAIN PAGE: Using persisted metadata with dataset:', metadata.dataset?.name);
-  }
-}, [metadata, setMetadata, isHydrated]); // ← Added isHydrated dependency
+    // Only initialize if metadata is still null after hydration
+    if (!metadata) {
+      console.log('🔍 MAIN PAGE: No persisted data found, initializing fresh metadata');
+      const freshMetadata: EvaluationMetadata = {
+        id: `eval_${Date.now()}`,
+        name: '',
+        description: '',
+        status: 'created',
+        createdAt: new Date().toISOString(),
+        dataset: {
+          uid: null,
+          id: null,
+          name: null,
+          selectedAt: null,
+          taskType: null,
+          rows: null,
+          columns: null
+        },
+        deployment: undefined,
+        metrics: {
+          categories: [],
+          selectedCategory: null,
+          totalSelected: 0,
+          configuration: null,
+          results: null
+        }
+      };
+      setMetadata(freshMetadata);
+    } else {
+      console.log('🔍 MAIN PAGE: Using persisted metadata with dataset:', metadata.dataset?.name);
+    }
+  }, [metadata, setMetadata, isHydrated]);
+
   // 🔸 HANDLE STEP COMPLETION
   const handleStepComplete = async (stepKey: string, data: any) => {
     try {
@@ -141,7 +148,6 @@ useEffect(() => {
         })) || [];
         
         addToast('Model deployment selected successfully', 'success');
-        // break; -> not needed outside a switch or loop
       }
       
       setMetadata(updatedMetadata);
@@ -177,10 +183,11 @@ useEffect(() => {
 
   // 🔸 RENDER CURRENT STEP
   const renderCurrentStep = () => {
-  console.log('🔍 MAIN PAGE RENDER DEBUG:');
-  console.log('  - currentStep:', currentStep);
-  console.log('  - metadata:', metadata);
-  console.log('  - metadata?.dataset:', metadata?.dataset);
+    console.log('🔍 MAIN PAGE RENDER DEBUG:');
+    console.log('  - currentStep:', currentStep);
+    console.log('  - metadata:', metadata);
+    console.log('  - metadata?.dataset:', metadata?.dataset);
+    
     if (!metadata) return null;
     
     const currentStepConfig = flowNavigator.getStepById(currentStep);
@@ -258,6 +265,15 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Optional: User info display */}
+      {user && (
+        <div className="fixed top-4 left-4 z-20 bg-white dark:bg-gray-800 px-3 py-1 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Logged in as <span className="font-medium text-gray-900 dark:text-gray-200">{user.userName}</span>
+          </div>
+        </div>
+      )}
+
       {/* Fixed header for the EvaluationStepper */}
       <header className="fixed top-0 left-0 right-0 z-10 bg-gray-50 dark:bg-gray-900 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -269,12 +285,14 @@ useEffect(() => {
           />
         </div>
       </header>
+
       {/* Main Content with top padding to offset fixed header */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 py-8">
         {/* Theme Toggle */}
         <div className="absolute top-4 right-4">
           <ThemeToggle />
         </div>
+        
         {/* Step Content */}
         {renderCurrentStep()}
       </main>
@@ -282,5 +300,14 @@ useEffect(() => {
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
+  );
+}
+
+// ✅ Main export with PrivateRoute protection
+export default function EvaluationStartPage() {
+  return (
+    <PrivateRoute>
+      <EvaluationStartPageContent />
+    </PrivateRoute>
   );
 }
