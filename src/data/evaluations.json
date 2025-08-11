@@ -4,7 +4,17 @@
     "activeEvaluations": 2,
     "completedEvaluations": 1,
     "failedEvaluations": 1,
-    "averageSuccessRate": 75
+    "totalDatasets": 3,
+    "averageSuccessRate": 75,
+    "activeDetails": {
+      "running": 2,
+      "queued": 1
+    },
+    "trends": {
+      "completedChange": "+1 from last week",
+      "datasetsChange": "+ 1 this month", 
+      "successRateChange": "+1.2% this week"
+    }
   },
   "evaluationRuns": [
     {

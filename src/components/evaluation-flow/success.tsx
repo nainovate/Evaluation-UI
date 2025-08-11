@@ -34,7 +34,7 @@ interface SuccessProps {
 }
 
 export const Success: React.FC<SuccessProps> = ({
-  evaluationName = 'Customer Support Quality Assessment',
+  evaluationName = 'Customer Support Evaluation',
   evaluationDescription = 'Comprehensive evaluation of customer support responses',
   onViewProgress,
   onReturnHome,
